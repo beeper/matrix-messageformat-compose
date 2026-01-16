@@ -21,6 +21,9 @@ object MatrixPatterns {
         } catch (_: Exception) {
             return null
         }
+        if (parsed.pathSegments.isEmpty()) {
+            return null
+        }
         // First segment is just blank
         val segments = parsed.pathSegments.subList(1, parsed.pathSegments.size)
         when (segments.size) {
