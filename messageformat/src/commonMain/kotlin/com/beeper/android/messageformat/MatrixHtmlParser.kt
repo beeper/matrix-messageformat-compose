@@ -156,7 +156,11 @@ class MatrixHtmlParser(
             return null
         }
         val text = if (ctx.preFormattedText) {
-            node.wholeText
+            if (lookahead.isEmpty()) {
+                node.wholeText.removeSuffix("\n")
+            } else {
+                node.wholeText
+            }
         } else if (previous?.nextShouldTrimBlank == true) {
             node.text().trimStart()
         } else {
