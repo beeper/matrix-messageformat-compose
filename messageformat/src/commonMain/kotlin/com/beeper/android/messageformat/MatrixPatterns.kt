@@ -30,17 +30,17 @@ object MatrixPatterns {
             1 -> {
                 val segment = segments.first()
                 if (USER_ID_REGEX.matches(segment)) {
-                    return MatrixToLink.UserMention(segment)
+                    return MatrixToLink.UserMention(segment, url)
                 }
                 if (ROOM_ID_REGEX.matches(segment)) {
                     val via = parsed.parameters.getAll("via")
-                    return MatrixToLink.RoomLink(segment, via)
+                    return MatrixToLink.RoomLink(segment, via, url)
                 }
             }
             2 -> {
                 if (ROOM_ID_REGEX.matches(segments[0]) && MESSAGE_ID_REGEX.matches(segments[1])) {
                     val via = parsed.parameters.getAll("via")
-                    return MatrixToLink.MessageLink(segments[0], segments[1], via)
+                    return MatrixToLink.MessageLink(segments[0], segments[1], via, url)
                 }
             }
         }
