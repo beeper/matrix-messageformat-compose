@@ -277,12 +277,16 @@ open class DefaultMatrixBodyStyledFormatter(
 
     override fun formatRoomLink(roomLink: MatrixToLink.RoomLink): List<AnnotatedString.Annotation>? {
         // Best overridden downstream to follow room links
-        return emptyList()
+        return listOf(
+            SpanStyle(color = Color.Blue)
+        )
     }
 
     override fun formatMessageLink(messageLink: MatrixToLink.MessageLink): List<AnnotatedString.Annotation>? {
         // Best overridden downstream to follow message links
-        return emptyList()
+        return listOf(
+            SpanStyle(color = Color.Blue)
+        )
     }
 
     override fun formatWebLink(href: String): List<AnnotatedString.Annotation>? {
