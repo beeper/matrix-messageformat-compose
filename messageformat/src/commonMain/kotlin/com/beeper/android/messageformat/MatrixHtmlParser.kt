@@ -314,7 +314,16 @@ class MatrixHtmlParser(
                 PreviousRenderedInfo(nextShouldTrimBlank = true)
             }
             "pre" -> {
+                if (previousRenderedInfo?.nextShouldTrimBlank == false) {
+                    ensureNewlineSeparation("pre1")
+                }
                 appendNodes(el.childNodes(), ctx.copy(preFormattedText = true), resultMeta) ?: PreviousRenderedInfo(nextShouldTrimBlank = true)
+                if (lookahead.shouldTrimEncompassingWhitespace()) {
+                    PreviousRenderedInfo()
+                } else {
+                    ensureNewlineSeparation("pre2")
+                    PreviousRenderedInfo(nextShouldTrimBlank = true)
+                }
             }
             "br" -> {
                 appendNewline("br")
