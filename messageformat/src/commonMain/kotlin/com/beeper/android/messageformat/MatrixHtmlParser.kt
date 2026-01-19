@@ -333,6 +333,17 @@ class MatrixHtmlParser(
                 PreviousRenderedInfo(nextShouldTrimBlank = true)
             }
 
+            // Horizontal divider line
+            "hr" -> {
+                ensureNewlineSeparation("hr1")
+                withAnnotation(MatrixBodyAnnotations.HORIZONTAL_RULE, "") {
+                    // Ensure we get a bounding box via non-breakable space
+                    append("\u00A0")
+                }
+                appendNewline("hr2")
+                PreviousRenderedInfo(nextShouldTrimBlank = true)
+            }
+
             // Links
             "a" -> {
                 val href = el.attr("href")
