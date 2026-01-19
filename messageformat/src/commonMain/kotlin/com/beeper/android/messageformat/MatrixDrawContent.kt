@@ -194,7 +194,7 @@ fun TextLayoutResult.perLineBoundingBoxesForRange(start: Int, end: Int): List<Dr
     return try {
         val firstLine = getLineForOffset(start)
         val lastLine = getLineForOffset(end)
-        (firstLine..lastLine).mapNotNull { line ->
+        (firstLine..lastLine).flatMap { line ->
             try {
                 val currentLineStart = getLineStart(line)
                 val startInLine = if (line == firstLine) {
@@ -209,29 +209,66 @@ fun TextLayoutResult.perLineBoundingBoxesForRange(start: Int, end: Int): List<Dr
                 }
                 val perLetterBoundingBoxes = (startInLine..<endInLine).mapNotNull { index ->
                     try {
-                        getBoundingBox(index)
+                        Pair(
+                            getBoundingBox(index),
+                            getBidiRunDirection(index),
+                        )
                     } catch (_: Exception) {
                         null
                     }
                 }
                 if (perLetterBoundingBoxes.isEmpty()) {
-                    return@mapNotNull null
+                    return@flatMap emptyList()
                 }
-                DrawPosition.InLine(
-                    Rect(
-                        // Left and right usually suffice checking the first/last element, but which one for each depends on LTR vs RTL language direction
-                        left = min(perLetterBoundingBoxes.first().left, perLetterBoundingBoxes.last().left),
-                        right = max(perLetterBoundingBoxes.last().right, perLetterBoundingBoxes.first().right),
-                        top = perLetterBoundingBoxes.minOf { it.top },
-                        bottom = perLetterBoundingBoxes.maxOf { it.bottom },
-                    ),
-                    start = startInLine,
-                    end = endInLine,
-                    line = line,
-                    textDirection = getParagraphDirection(startInLine),
-                )
+                // We need to split up different layout directions in the same line to
+                // yield accurate bounding boxes. E.g. force RTL text and have a
+                // "Spoiler <span>alert!</span>", then it will have the exclamation mark split of from the rest...
+                val partitionedBoundingBoxes = buildList {
+                    var currentDirection: ResolvedTextDirection? = null
+                    val currentList = mutableListOf<Rect>()
+                    perLetterBoundingBoxes.forEach {
+                        if (it.second == currentDirection) {
+                            currentList.add(it.first)
+                        } else {
+                            if (currentList.isNotEmpty() && currentDirection != null) {
+                                add(Pair(currentDirection, currentList.toPersistentList()))
+                                currentList.clear()
+                            }
+                            currentList.add(it.first)
+                            currentDirection = it.second
+                        }
+                    }
+                    if (currentList.isNotEmpty() && currentDirection != null) {
+                        add(Pair(currentDirection, currentList.toPersistentList()))
+                        currentList.clear()
+                    }
+                }
+                partitionedBoundingBoxes.map { (direction, boxes) ->
+                    val isRtl = direction == ResolvedTextDirection.Rtl
+                    DrawPosition.InLine(
+                        Rect(
+                            // Left and right usually suffice checking the first/last element
+                            left = if (isRtl) {
+                                boxes.last().left
+                            } else {
+                                boxes.first().left
+                            },
+                            right = if (isRtl) {
+                                boxes.first().right
+                            } else {
+                                boxes.last().right
+                            },
+                            top = boxes.minOf { it.top },
+                            bottom = boxes.maxOf { it.bottom },
+                        ),
+                        start = startInLine,
+                        end = endInLine,
+                        line = line,
+                        textDirection = direction,
+                    )
+                }
             } catch (_: IllegalArgumentException) {
-                null
+                emptyList()
             }
         }
     } catch (_: IllegalArgumentException) {
