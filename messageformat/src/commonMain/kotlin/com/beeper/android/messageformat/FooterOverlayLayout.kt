@@ -42,7 +42,11 @@ fun FooterOverlayLayout(
         val textPlaceable = textMeasurable.measure(constraints)
         val overlayPlaceable = overlayMeasurable.measure(constraints)
 
-        val lastLineWidth = textLayoutResult.getLineRight(textLayoutResult.lineCount-1).roundToInt()
+        val lastLineWidth = if (textLayoutResult.lineCount > 0) {
+            textLayoutResult.getLineRight(textLayoutResult.lineCount-1).roundToInt()
+        } else {
+            0
+        }
         val maxAvailableWidth = constraints.maxWidth
 
         val lastLineWidthWithHorizontalOverlay = lastLineWidth + overlayPlaceable.width + horizontalPaddingPx

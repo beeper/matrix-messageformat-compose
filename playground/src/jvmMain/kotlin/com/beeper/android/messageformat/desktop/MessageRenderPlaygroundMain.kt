@@ -106,7 +106,7 @@ fun TextRenderScreen() {
                 ) {
                     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
                     FooterOverlayLayoutWrapper(
-                        textLayoutResult  = textLayoutResult,
+                        textLayoutResult = textLayoutResult,
                         content = {
                             MatrixStyledFormattedText(
                                 parseResult = parseResult,
