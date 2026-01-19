@@ -5,7 +5,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
 import co.touchlab.kermit.Logger
@@ -13,15 +12,15 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlin.math.max
 
 class MatrixFormatOnTextRenderResult(
-    internal val userMentions: ImmutableList<Pair<String, Rect>>,
-    internal val roomMentions: ImmutableList<Rect>,
-    internal val blockQuotes: ImmutableList<Pair<Int, Rect>>,
-    internal val inlineCode: ImmutableList<Rect>,
-    internal val blockCode: ImmutableList<Rect>,
-    internal val spans: ImmutableList<Pair<SpanAttributes, Rect>>,
-    internal val fullDetailsSummaries: ImmutableList<Pair<Int, Rect>>,
-    internal val detailsSummariesFirstLines: ImmutableList<Pair<Int, Rect>>,
-    internal val detailsContents: ImmutableList<Pair<Int, Rect>>,
+    internal val userMentions: ImmutableList<Pair<String, DrawPosition.InLine>>,
+    internal val roomMentions: ImmutableList<DrawPosition.InLine>,
+    internal val blockQuotes: ImmutableList<Pair<Int, DrawPosition.Block>>,
+    internal val inlineCode: ImmutableList<DrawPosition.InLine>,
+    internal val blockCode: ImmutableList<DrawPosition.Block>,
+    internal val spans: ImmutableList<Pair<SpanAttributes, DrawPosition.InLine>>,
+    internal val fullDetailsSummaries: ImmutableList<Pair<Int, DrawPosition.Block>>,
+    internal val detailsSummariesFirstLines: ImmutableList<Pair<Int, DrawPosition.InLine>>,
+    internal val detailsContents: ImmutableList<Pair<Int, DrawPosition.Block>>,
 )
 
 @Stable

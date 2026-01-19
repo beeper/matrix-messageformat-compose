@@ -108,6 +108,14 @@ and another one
 <p>Here an inline image <img src='mxc://local.beeper.com/spiritcroc_TnTnE9q1fOXD0gtA9UlcBrStvCVLWwAbAtKcAIOKqWJRtQeZwsniGSRVA8xV51tB' alt='Example image' width='200' height='100' data-mx-emoticon> using a Matrix content URI.</p>
 <p>Have some GIFs too <img src='mxc://local.beeper-staging.com/spirit2_MMMenUsTgZdM9lbg2O6MW6SYB4h0MOw0uqMfRCrX0Xk0jKtRrbrvRqqccyOuf3Yd' alt='GIF1' width='200' height='100' data-mx-emoticon><img src='mxc://local.beeper-staging.com/spirit2_18PUFOHdg7rNExXLXgXv4Ws27fqRrSMSdLRVNQuIP0rUh7CM8qQqkUj9yFzvFDcA' alt='GIF2' width='100' height='100'> and a lottie <img src="mxc://local.beeper.com/spiritcroc_ROUkxDcXkLYjTTRJuI6OirQagO1VrIejupwDVgaKS2K7fykiz2BbRVaZq6sqwbmB" alt="LOTTIE"></p>
 
+<h2>RTL text</h2>
+<blockquote>
+<p><span data-mx-bg-color='#00ffff'>
+برخی از متن که به زبان فارسی است، اما من فارسی صحبت نمی کنم، بنابراین من برخی از انگلیسی به فارسی با استفاده از گوگل ترجمه، ترجمه شده است. من کاملا مطمئنم که ترجمه واقعا افتضاح است
+</span>
+</p>
+</blockquote>
+
 <h2>Paragraphs</h2>
 <p>One paragraph</p>
 <p>Second paragraph<br>with newline in between</p>

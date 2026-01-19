@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,9 +32,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -65,6 +69,8 @@ fun TextRenderScreen() {
     var newlineDbg by remember { mutableStateOf(false) }
     var wrapWidth by remember { mutableStateOf(false) }
     var forceWrapWidth by remember { mutableStateOf(false) }
+    var inverseLayout by remember { mutableStateOf(false) }
+    var rtlText by remember { mutableStateOf(false) }
     val parser = remember(newlineDbg) { MatrixHtmlParser(newlineDbg = newlineDbg) }
     val renderTextStyle = MaterialTheme.typography.bodyLarge
     val baseDensity = LocalDensity.current
@@ -78,7 +84,15 @@ fun TextRenderScreen() {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             CompositionLocalProvider(
-                LocalDensity provides density
+                LocalDensity provides density,
+                LocalLayoutDirection provides if (inverseLayout) {
+                    when (LocalLayoutDirection.current) {
+                        LayoutDirection.Ltr -> LayoutDirection.Rtl
+                        LayoutDirection.Rtl -> LayoutDirection.Ltr
+                    }
+                } else {
+                    LocalLayoutDirection.current
+                }
             ) {
                 val preFormatStyle = remember {
                     MatrixBodyPreFormatStyle(
@@ -119,7 +133,13 @@ fun TextRenderScreen() {
                                     )
                                 },
                                 color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    textDirection = if (rtlText) {
+                                        TextDirection.Rtl
+                                    } else {
+                                        TextDirection.Ltr
+                                    }
+                                ),
                                 onTextLayout = { textLayoutResult = it },
                             )
                         },
@@ -138,7 +158,7 @@ fun TextRenderScreen() {
         }
         Column(
             Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Render scale:")
@@ -156,21 +176,52 @@ fun TextRenderScreen() {
                     valueRange = 0.5f..4f,
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Allow room mentions:")
-                Switch(checked = allowRoomMention, onCheckedChange = { allowRoomMention = it})
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Debug newlines:")
-                Switch(checked = newlineDbg, onCheckedChange = { newlineDbg = it})
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Wrap width:")
-                Switch(checked = wrapWidth, onCheckedChange = { wrapWidth = it})
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Force layout wrap width:")
-                Switch(checked = forceWrapWidth, onCheckedChange = { forceWrapWidth = it})
+            // Wrap toggles in column to have narrower arrangement
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Allow room mentions:")
+                    Switch(checked = allowRoomMention, onCheckedChange = { allowRoomMention = it })
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Debug newlines:")
+                    Switch(checked = newlineDbg, onCheckedChange = { newlineDbg = it })
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Wrap width:")
+                    Switch(checked = wrapWidth, onCheckedChange = { wrapWidth = it })
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Force layout wrap width:")
+                    Switch(checked = forceWrapWidth, onCheckedChange = { forceWrapWidth = it })
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Inverse layout:")
+                    Switch(checked = inverseLayout, onCheckedChange = { inverseLayout = it })
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("RTL text:")
+                    Switch(
+                        checked = rtlText,
+                        onCheckedChange = { rtlText = it })
+                }
             }
             Text(
                 "Input:",
