@@ -15,7 +15,7 @@ import kotlin.math.roundToInt
  * the bounds of the composable if necessary.
  */
 @Composable
-fun TimestampOverlayLayout(
+fun FooterOverlayLayout(
     textLayoutResult: TextLayoutResult,
     horizontalPadding: Dp,
     verticalPadding: Dp,

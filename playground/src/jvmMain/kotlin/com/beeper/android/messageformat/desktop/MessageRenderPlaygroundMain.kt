@@ -31,10 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import com.beeper.android.messageformat.FooterOverlayLayout
 import com.beeper.android.messageformat.MatrixBodyParseResult
 import com.beeper.android.messageformat.MatrixHtmlParser
 import com.beeper.android.messageformat.MatrixBodyPreFormatStyle
@@ -56,6 +59,7 @@ fun TextRenderScreen() {
     var renderScale by remember { mutableFloatStateOf(2f) }
     var fontScale by remember { mutableFloatStateOf(1f) }
     var textInput by remember { mutableStateOf(EXAMPLE_MESSAGE) }
+    var footerText by remember { mutableStateOf("") }
     var parseResult by remember { mutableStateOf(MatrixBodyParseResult("")) }
     var allowRoomMention by remember { mutableStateOf(true) }
     var newlineDbg by remember { mutableStateOf(false) }
@@ -99,22 +103,32 @@ fun TextRenderScreen() {
                         .weight(1f)
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    MatrixStyledFormattedText(
-                        parseResult = parseResult,
-                        inlineContent = parseResult.inlineImages.toInlineContent(density, renderTextStyle.fontSize) { info, modifier ->
-                            // Playground doesn't have a Matrix client for fetching images, just do a placeholder icon
-                            Image(
-                                Icons.Default.Image,
-                                info.alt ?: info.title,
-                                modifier,
+                    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+                    FooterOverlayLayoutWrapper(
+                        textLayoutResult  = textLayoutResult,
+                        content = {
+                            MatrixStyledFormattedText(
+                                parseResult = parseResult,
+                                inlineContent = parseResult.inlineImages.toInlineContent(density, renderTextStyle.fontSize) { info, modifier ->
+                                    // Playground doesn't have a Matrix client for fetching images, just do a placeholder icon
+                                    Image(
+                                        Icons.Default.Image,
+                                        info.alt ?: info.title,
+                                        modifier,
+                                    )
+                                },
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = if (wrapWidth) {
+                                    Modifier.border(2.dp, Color.Gray)
+                                } else {
+                                    Modifier.fillMaxWidth()
+                                },
+                                onTextLayout = { textLayoutResult = it },
                             )
                         },
-                        color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = if (wrapWidth) {
-                            Modifier.border(2.dp, Color.Gray)
-                        } else {
-                            Modifier.fillMaxWidth()
+                        overlay = {
+                            Text(footerText)
                         },
                     )
                 }
@@ -162,6 +176,42 @@ fun TextRenderScreen() {
                 onValueChange = { textInput = it },
                 modifier = Modifier.fillMaxSize().weight(1f),
             )
+            Text(
+                "Footer:",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            TextField(
+                value = footerText,
+                onValueChange = { footerText = it },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
+    }
+}
+
+/** Wrapper that drops the overlay while [textLayoutResult] is null */
+@Composable
+fun FooterOverlayLayoutWrapper(
+    textLayoutResult: TextLayoutResult?,
+    horizontalPadding: Dp = 8.dp,
+    verticalPadding: Dp = 8.dp,
+    content: @Composable () -> Unit,
+    overlay: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (textLayoutResult == null) {
+        Box(modifier) {
+            content()
+        }
+    } else {
+        FooterOverlayLayout(
+            textLayoutResult = textLayoutResult,
+            horizontalPadding = horizontalPadding,
+            verticalPadding = verticalPadding,
+            content = content,
+            overlay = overlay,
+            modifier = modifier,
+        )
     }
 }
