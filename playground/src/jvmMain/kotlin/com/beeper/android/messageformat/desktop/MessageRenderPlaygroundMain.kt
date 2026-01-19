@@ -31,10 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import com.beeper.android.messageformat.FooterOverlayLayout
 import com.beeper.android.messageformat.MatrixBodyParseResult
 import com.beeper.android.messageformat.MatrixHtmlParser
 import com.beeper.android.messageformat.MatrixBodyPreFormatStyle
@@ -56,10 +59,12 @@ fun TextRenderScreen() {
     var renderScale by remember { mutableFloatStateOf(2f) }
     var fontScale by remember { mutableFloatStateOf(1f) }
     var textInput by remember { mutableStateOf(EXAMPLE_MESSAGE) }
+    var footerText by remember { mutableStateOf("") }
     var parseResult by remember { mutableStateOf(MatrixBodyParseResult("")) }
     var allowRoomMention by remember { mutableStateOf(true) }
     var newlineDbg by remember { mutableStateOf(false) }
     var wrapWidth by remember { mutableStateOf(false) }
+    var forceWrapWidth by remember { mutableStateOf(false) }
     val parser = remember(newlineDbg) { MatrixHtmlParser(newlineDbg = newlineDbg) }
     val renderTextStyle = MaterialTheme.typography.bodyLarge
     val baseDensity = LocalDensity.current
@@ -99,18 +104,29 @@ fun TextRenderScreen() {
                         .weight(1f)
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    MatrixStyledFormattedText(
-                        parseResult = parseResult,
-                        inlineContent = parseResult.inlineImages.toInlineContent(density, renderTextStyle.fontSize) { info, modifier ->
-                            // Playground doesn't have a Matrix client for fetching images, just do a placeholder icon
-                            Image(
-                                Icons.Default.Image,
-                                info.alt ?: info.title,
-                                modifier,
+                    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+                    FooterOverlayLayoutWrapper(
+                        textLayoutResult = textLayoutResult,
+                        content = {
+                            MatrixStyledFormattedText(
+                                parseResult = parseResult,
+                                inlineContent = parseResult.inlineImages.toInlineContent(density, renderTextStyle.fontSize) { info, modifier ->
+                                    // Playground doesn't have a Matrix client for fetching images, just do a placeholder icon
+                                    Image(
+                                        Icons.Default.Image,
+                                        info.alt ?: info.title,
+                                        modifier,
+                                    )
+                                },
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyLarge,
+                                onTextLayout = { textLayoutResult = it },
                             )
                         },
-                        color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyLarge,
+                        overlay = {
+                            Text(footerText)
+                        },
+                        forceWrapWidth = forceWrapWidth,
                         modifier = if (wrapWidth) {
                             Modifier.border(2.dp, Color.Gray)
                         } else {
@@ -152,6 +168,10 @@ fun TextRenderScreen() {
                 Text("Wrap width:")
                 Switch(checked = wrapWidth, onCheckedChange = { wrapWidth = it})
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Force layout wrap width:")
+                Switch(checked = forceWrapWidth, onCheckedChange = { forceWrapWidth = it})
+            }
             Text(
                 "Input:",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -162,6 +182,44 @@ fun TextRenderScreen() {
                 onValueChange = { textInput = it },
                 modifier = Modifier.fillMaxSize().weight(1f),
             )
+            Text(
+                "Footer:",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            TextField(
+                value = footerText,
+                onValueChange = { footerText = it },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
+    }
+}
+
+/** Wrapper that drops the overlay while [textLayoutResult] is null */
+@Composable
+fun FooterOverlayLayoutWrapper(
+    textLayoutResult: TextLayoutResult?,
+    horizontalPadding: Dp = 8.dp,
+    verticalPadding: Dp = 8.dp,
+    content: @Composable () -> Unit,
+    overlay: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    forceWrapWidth: Boolean = false,
+) {
+    if (textLayoutResult == null) {
+        Box(modifier) {
+            content()
+        }
+    } else {
+        FooterOverlayLayout(
+            textLayoutResult = textLayoutResult,
+            horizontalPadding = horizontalPadding,
+            verticalPadding = verticalPadding,
+            content = content,
+            overlay = overlay,
+            modifier = modifier,
+            forceWrapWidth = forceWrapWidth,
+        )
     }
 }
