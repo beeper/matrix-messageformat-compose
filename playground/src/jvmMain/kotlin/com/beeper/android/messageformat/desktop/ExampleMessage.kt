@@ -87,6 +87,8 @@ and another one
       <li>ordered</li>
       <li>list</li>
       </ol>
+      <h5>Header in the quote</h5>
+      <p>more quoted stuff</p>
     </blockquote>
 </blockquote>
 <p>Not quote</p>
