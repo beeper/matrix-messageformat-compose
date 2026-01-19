@@ -22,6 +22,7 @@ fun FooterOverlayLayout(
     content: @Composable () -> Unit,
     overlay: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    forceWrapWidth: Boolean = false,
 ) {
     val density = LocalDensity.current
     val horizontalPaddingPx = density.run { horizontalPadding.roundToPx() }
@@ -46,9 +47,17 @@ fun FooterOverlayLayout(
 
         val lastLineWidthWithHorizontalOverlay = lastLineWidth + overlayPlaceable.width + horizontalPaddingPx
 
+        val textMaxWidth = if (forceWrapWidth && textLayoutResult.lineCount > 0) {
+            (0..<textLayoutResult.lineCount).maxOf { line ->
+                textLayoutResult.getLineRight(line).roundToInt()
+            }
+        } else {
+            textPlaceable.width
+        }
+
         if (maxAvailableWidth >= lastLineWidthWithHorizontalOverlay) {
             // Fits into the last line
-            val width = max(textPlaceable.width, lastLineWidthWithHorizontalOverlay)
+            val width = max(textMaxWidth, lastLineWidthWithHorizontalOverlay)
             val height = max(textPlaceable.height, overlayPlaceable.height)
             layout(width, height) {
                 textPlaceable.place(0, 0)
@@ -59,7 +68,7 @@ fun FooterOverlayLayout(
             }
         } else {
             // Needs a new line
-            val width = max(textPlaceable.width, overlayPlaceable.width)
+            val width = max(textMaxWidth, overlayPlaceable.width)
             val height = textPlaceable.height + verticalPaddingPx + overlayPlaceable.height
             layout(width, height) {
                 textPlaceable.place(0, 0)

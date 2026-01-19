@@ -64,6 +64,7 @@ fun TextRenderScreen() {
     var allowRoomMention by remember { mutableStateOf(true) }
     var newlineDbg by remember { mutableStateOf(false) }
     var wrapWidth by remember { mutableStateOf(false) }
+    var forceWrapWidth by remember { mutableStateOf(false) }
     val parser = remember(newlineDbg) { MatrixHtmlParser(newlineDbg = newlineDbg) }
     val renderTextStyle = MaterialTheme.typography.bodyLarge
     val baseDensity = LocalDensity.current
@@ -119,16 +120,17 @@ fun TextRenderScreen() {
                                 },
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyLarge,
-                                modifier = if (wrapWidth) {
-                                    Modifier.border(2.dp, Color.Gray)
-                                } else {
-                                    Modifier.fillMaxWidth()
-                                },
                                 onTextLayout = { textLayoutResult = it },
                             )
                         },
                         overlay = {
                             Text(footerText)
+                        },
+                        forceWrapWidth = forceWrapWidth,
+                        modifier = if (wrapWidth) {
+                            Modifier.border(2.dp, Color.Gray)
+                        } else {
+                            Modifier.fillMaxWidth()
                         },
                     )
                 }
@@ -166,6 +168,10 @@ fun TextRenderScreen() {
                 Text("Wrap width:")
                 Switch(checked = wrapWidth, onCheckedChange = { wrapWidth = it})
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Force layout wrap width:")
+                Switch(checked = forceWrapWidth, onCheckedChange = { forceWrapWidth = it})
+            }
             Text(
                 "Input:",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -199,6 +205,7 @@ fun FooterOverlayLayoutWrapper(
     content: @Composable () -> Unit,
     overlay: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    forceWrapWidth: Boolean = false,
 ) {
     if (textLayoutResult == null) {
         Box(modifier) {
@@ -212,6 +219,7 @@ fun FooterOverlayLayoutWrapper(
             content = content,
             overlay = overlay,
             modifier = modifier,
+            forceWrapWidth = forceWrapWidth,
         )
     }
 }
