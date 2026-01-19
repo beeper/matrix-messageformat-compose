@@ -1,11 +1,13 @@
 package com.beeper.android.messageformat.desktop
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -27,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -56,6 +59,7 @@ fun TextRenderScreen() {
     var parseResult by remember { mutableStateOf(MatrixBodyParseResult("")) }
     var allowRoomMention by remember { mutableStateOf(true) }
     var newlineDbg by remember { mutableStateOf(false) }
+    var wrapWidth by remember { mutableStateOf(false) }
     val parser = remember(newlineDbg) { MatrixHtmlParser(newlineDbg = newlineDbg) }
     val renderTextStyle = MaterialTheme.typography.bodyLarge
     val baseDensity = LocalDensity.current
@@ -107,6 +111,11 @@ fun TextRenderScreen() {
                         },
                         color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.bodyLarge,
+                        modifier = if (wrapWidth) {
+                            Modifier.border(2.dp, Color.Gray)
+                        } else {
+                            Modifier.fillMaxWidth()
+                        },
                     )
                 }
             }
@@ -138,6 +147,10 @@ fun TextRenderScreen() {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Debug newlines:")
                 Switch(checked = newlineDbg, onCheckedChange = { newlineDbg = it})
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Wrap width:")
+                Switch(checked = wrapWidth, onCheckedChange = { wrapWidth = it})
             }
             Text(
                 "Input:",
