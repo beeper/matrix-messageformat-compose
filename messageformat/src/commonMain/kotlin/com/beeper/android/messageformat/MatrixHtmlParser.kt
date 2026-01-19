@@ -206,6 +206,10 @@ class MatrixHtmlParser(
             while (matcher.find()) {
                 val startInText = matcher.start()
                 val endInText = matcher.end()
+                if (startInText > 0 && !text[startInText - 1].isWhitespace()) {
+                    // Skip mid-word linkification
+                    continue
+                }
                 val url = text.substring(startInText, endInText)
                 // Handle matrix.to links specifically for user mentions and room / message links
                 val matrixLink = MatrixPatterns.parseMatrixToUrl(url)
