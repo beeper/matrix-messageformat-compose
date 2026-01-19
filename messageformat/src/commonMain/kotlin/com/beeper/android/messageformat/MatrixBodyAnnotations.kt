@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
  * String annotation tag names that are applied in the first processing pass,
  * in order to do further post processing later.
  */
-internal object MatrixBodyAnnotations {
+object MatrixBodyAnnotations {
     const val HEADING = "mx:HEADING"
     const val USER_MENTION = "mx:USER_MENTION"
     const val ROOM_MENTION = "mx:ROOM_MENTION"
