@@ -23,6 +23,7 @@ object MatrixBodyAnnotations {
     const val SPAN = "mx:SPAN"
     const val DETAILS_SUMMARY = "mx:DETAILS_SUMMARY"
     const val DETAILS_CONTENT = "mx:DETAILS_CONTENT"
+    const val HORIZONTAL_RULE = "mx:HR"
     const val INLINE_IMAGE_PREFIX = "mx:IMG:"
     const val CLICK_TO_REVEAL = "mx:CLICK_TO_REVEAL"
 }

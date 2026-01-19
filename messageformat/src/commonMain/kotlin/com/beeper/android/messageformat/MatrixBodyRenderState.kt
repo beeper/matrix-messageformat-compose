@@ -21,6 +21,7 @@ class MatrixFormatOnTextRenderResult(
     internal val fullDetailsSummaries: ImmutableList<Pair<Int, DrawPosition.Block>>,
     internal val detailsSummariesFirstLines: ImmutableList<Pair<Int, DrawPosition.InLine>>,
     internal val detailsContents: ImmutableList<Pair<Int, DrawPosition.Block>>,
+    internal val horizontalRules: ImmutableList<DrawPosition.InLine>,
 )
 
 @Stable

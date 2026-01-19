@@ -134,4 +134,12 @@ data class MatrixBodyDrawStyle(
         drawPath(trianglePath, defaultForegroundColor)
     },
     val drawBehindDetailsContent: (DrawScope.(revealId: Int, DrawPosition.Block, MatrixFormatInteractionState) -> Unit)? = null,
+    val drawBehindHorizontalRule: (DrawScope.(DrawPosition.InLine) -> Unit)? = { pos ->
+        drawRoundRect(
+            defaultForegroundColor,
+            topLeft = Offset(0f, pos.rect.centerLeft.y - 2f * density),
+            size = Size(size.width, 4f * density),
+            cornerRadius = CornerRadius(4f * density, 4f * density)
+        )
+    }
 )

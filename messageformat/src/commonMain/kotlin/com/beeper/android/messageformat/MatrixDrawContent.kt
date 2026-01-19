@@ -107,6 +107,9 @@ fun MatrixBodyRenderState.onMatrixBodyLayout(
             }
         }
     }
+    val horizontalRules = flatMapAnnotationsIfSet(style.drawBehindHorizontalRule, MatrixBodyAnnotations.HORIZONTAL_RULE) { annotation ->
+        layoutResult.perLineBoundingBoxesForRange(annotation.start, annotation.end)
+    }
     // Result
     renderResult.value = MatrixFormatOnTextRenderResult(
         userMentions = userMentions,
@@ -118,6 +121,7 @@ fun MatrixBodyRenderState.onMatrixBodyLayout(
         fullDetailsSummaries = fullDetailsSummaries,
         detailsSummariesFirstLines = detailsSummariesFirstLines,
         detailsContents = detailsContents,
+        horizontalRules = horizontalRules,
     )
 }
 
@@ -159,6 +163,7 @@ fun Modifier.matrixBodyDrawWithContent(
     drawFor(state.style.drawBehindDetailsSummary, result.fullDetailsSummaries, interactionState)
     drawFor(state.style.drawBehindDetailsSummaryFirstLine, result.detailsSummariesFirstLines, interactionState)
     drawFor(state.style.drawBehindDetailsContent, result.detailsContents, interactionState)
+    drawFor(state.style.drawBehindHorizontalRule, result.horizontalRules)
     drawContent()
     drawFor(state.style.drawAboveSpan, result.spans, interactionState)
 }
