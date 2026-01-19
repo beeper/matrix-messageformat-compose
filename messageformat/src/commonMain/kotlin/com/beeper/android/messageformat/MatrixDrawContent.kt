@@ -7,6 +7,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.style.ResolvedTextDirection
 import co.touchlab.kermit.Logger
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -14,6 +15,31 @@ import kotlinx.collections.immutable.toPersistentList
 import kotlinx.serialization.json.Json
 import kotlin.math.max
 import kotlin.math.min
+
+sealed interface DrawPosition {
+    val rect: Rect
+    val start: Int
+    val end: Int
+    val textDirection: ResolvedTextDirection
+
+    val isRtl: Boolean
+        get() = textDirection == ResolvedTextDirection.Rtl
+
+    data class Block(
+        override val rect: Rect,
+        override val start: Int,
+        override val end: Int,
+        override val textDirection: ResolvedTextDirection,
+    ) : DrawPosition
+
+    data class InLine(
+        override val rect: Rect,
+        override val start: Int,
+        override val end: Int,
+        val line: Int,
+        override val textDirection: ResolvedTextDirection,
+    ) : DrawPosition
+}
 
 /**
  * Call in your Text composable onTextLayout in order to update the [TextLayoutResult] with information to consume in
@@ -130,7 +156,7 @@ fun Modifier.matrixBodyDrawWithContent(
     drawFor(state.style.drawBehindRoomMention, result.roomMentions)
     drawFor(state.style.drawBehindUserMention, result.userMentions)
     drawFor(state.style.drawBehindSpan, result.spans, interactionState)
-    drawFor(state.style.drawBehindDetailsSummary, result.detailsSummariesFirstLines, interactionState)
+    drawFor(state.style.drawBehindDetailsSummary, result.fullDetailsSummaries, interactionState)
     drawFor(state.style.drawBehindDetailsSummaryFirstLine, result.detailsSummariesFirstLines, interactionState)
     drawFor(state.style.drawBehindDetailsContent, result.detailsContents, interactionState)
     drawContent()
@@ -164,7 +190,7 @@ private fun <T, U, S>DrawScope.drawFor(function: (DrawScope.(T, U, S) -> Unit)?,
 /**
  * Finds bounding boxes for the given text range, one box per line in case the text spans multiple lines.
  */
-fun TextLayoutResult.perLineBoundingBoxesForRange(start: Int, end: Int): List<Rect> {
+fun TextLayoutResult.perLineBoundingBoxesForRange(start: Int, end: Int): List<DrawPosition.InLine> {
     return try {
         val firstLine = getLineForOffset(start)
         val lastLine = getLineForOffset(end)
@@ -191,12 +217,18 @@ fun TextLayoutResult.perLineBoundingBoxesForRange(start: Int, end: Int): List<Re
                 if (perLetterBoundingBoxes.isEmpty()) {
                     return@mapNotNull null
                 }
-                Rect(
-                    // Left and right usually suffice checking the first/last element, but which one for each depends on LTR vs RTL language direction
-                    left = min(perLetterBoundingBoxes.first().left, perLetterBoundingBoxes.last().left),
-                    right = max(perLetterBoundingBoxes.last().right, perLetterBoundingBoxes.first().right),
-                    top = perLetterBoundingBoxes.minOf { it.top },
-                    bottom = perLetterBoundingBoxes.maxOf { it.bottom },
+                DrawPosition.InLine(
+                    Rect(
+                        // Left and right usually suffice checking the first/last element, but which one for each depends on LTR vs RTL language direction
+                        left = min(perLetterBoundingBoxes.first().left, perLetterBoundingBoxes.last().left),
+                        right = max(perLetterBoundingBoxes.last().right, perLetterBoundingBoxes.first().right),
+                        top = perLetterBoundingBoxes.minOf { it.top },
+                        bottom = perLetterBoundingBoxes.maxOf { it.bottom },
+                    ),
+                    start = startInLine,
+                    end = endInLine,
+                    line = line,
+                    textDirection = getParagraphDirection(startInLine),
                 )
             } catch (_: IllegalArgumentException) {
                 null
@@ -210,18 +242,23 @@ fun TextLayoutResult.perLineBoundingBoxesForRange(start: Int, end: Int): List<Re
 /**
  * Finds the bounding box for paragraphs.
  */
-fun TextLayoutResult.blockBoundingBox(start: Int, end: Int): Rect? {
+fun TextLayoutResult.blockBoundingBox(start: Int, end: Int): DrawPosition.Block? {
     return try {
         val firstLine = getLineForOffset(start)
         var lastLine = getLineForOffset(end)
         if (lastLine > firstLine && getLineStart(lastLine) == end) {
             lastLine--
         }
-        Rect(
-            top = getLineTop(firstLine),
-            bottom = getLineBottom(lastLine),
-            left = (firstLine..lastLine).minOf { getLineLeft(it) },
-            right = (firstLine..lastLine).maxOf { getLineRight(it) },
+        DrawPosition.Block(
+            Rect(
+                top = getLineTop(firstLine),
+                bottom = getLineBottom(lastLine),
+                left = (firstLine..lastLine).minOf { getLineLeft(it) },
+                right = (firstLine..lastLine).maxOf { getLineRight(it) },
+            ),
+            start = start,
+            end = end,
+            textDirection = getParagraphDirection(start),
         )
     } catch (_: IllegalArgumentException) {
         null

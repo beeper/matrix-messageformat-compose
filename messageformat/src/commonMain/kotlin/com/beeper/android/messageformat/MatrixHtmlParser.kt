@@ -47,7 +47,6 @@ class MatrixHtmlParser(
         val pendingBlankText: String? = null,
         val indentedBlockDepth: Int = 0,
     ) {
-        // TODO are there other cases we should completely eat whitespace (including newlines)?
         val shouldIgnoreWhitespace: Boolean
             get() = !preFormattedText && (unorderedListScope != null || orderedListScope != null)
     }

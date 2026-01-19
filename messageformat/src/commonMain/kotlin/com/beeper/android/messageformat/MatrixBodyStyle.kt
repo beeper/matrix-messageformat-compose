@@ -32,54 +32,75 @@ data class MatrixBodyPreFormatStyle(
  */
 data class MatrixBodyDrawStyle(
     val defaultForegroundColor: Color = Color.Gray,
-    val drawBehindUserMention: (DrawScope.(String, Rect) -> Unit)? = { _, position ->
-        drawRoundRect(Color.Blue, topLeft = position.topLeft, size = position.size, cornerRadius = CornerRadius(4f * density, 4f * density))
+    val drawBehindUserMention: (DrawScope.(String, DrawPosition.InLine) -> Unit)? = { _, pos ->
+        val rect = pos.rect
+        drawRoundRect(
+            Color.Blue,
+            topLeft = rect.topLeft,
+            size = rect.size,
+            cornerRadius = CornerRadius(4f * density, 4f * density)
+        )
     },
-    val drawBehindRoomMention: (DrawScope.(Rect) -> Unit)? = null,
-    val drawBehindBlockQuote: (DrawScope.(Int, Rect) -> Unit)? = { _, position ->
+    val drawBehindRoomMention: (DrawScope.(DrawPosition.InLine) -> Unit)? = null,
+    val drawBehindBlockQuote: (DrawScope.(Int, DrawPosition.Block) -> Unit)? = { _, pos ->
+        val rect = pos.rect
         drawRoundRect(
             defaultForegroundColor,
-            topLeft = position.topLeft - Offset(12f * density, 0f),
-            size = Size(4f * density, position.height),
+            topLeft = if (pos.isRtl) {
+                rect.topRight + Offset(12f * density, 0f)
+            } else {
+                rect.topLeft - Offset(12f * density, 0f)
+            },
+            size = Size(4f * density, rect.height),
             cornerRadius = CornerRadius(4f * density, 4f * density),
         )
     },
-    val drawBehindInlineCode: (DrawScope.(Rect) -> Unit)? = {
-        drawRoundRect(Color.Black, topLeft = it.topLeft, size = it.size, cornerRadius = CornerRadius(4f * density, 4f * density))
+    val drawBehindInlineCode: (DrawScope.(DrawPosition.InLine) -> Unit)? = { pos ->
+        val rect = pos.rect
+        drawRoundRect(
+            Color.Black,
+            topLeft = rect.topLeft,
+            size = rect.size,
+            cornerRadius = CornerRadius(4f * density, 4f * density),
+        )
     },
-    val drawBehindBlockCode: (DrawScope.(Rect) -> Unit)? = {
+    val drawBehindBlockCode: (DrawScope.(DrawPosition.Block) -> Unit)? = { pos ->
+        val rect = pos.rect
         val horizontalPadding = 4f * density
         val verticalPadding = 1f * density
         drawRoundRect(
             Color.Black,
-            topLeft = it.topLeft - Offset(horizontalPadding, verticalPadding),
-            size = Size(it.size.width + horizontalPadding * 2, it.size.height + verticalPadding * 2),
-            cornerRadius = CornerRadius(4f * density, 4f * density)
+            topLeft = rect.topLeft - Offset(horizontalPadding, verticalPadding),
+            size = Size(rect.size.width + horizontalPadding * 2, rect.size.height + verticalPadding * 2),
+            cornerRadius = CornerRadius(4f * density, 4f * density),
         )
     },
-    val drawBehindSpan: (DrawScope.(SpanAttributes, Rect, MatrixFormatInteractionState) -> Unit)? = { attributes, position, _ ->
+    val drawBehindSpan: (DrawScope.(SpanAttributes, DrawPosition.InLine, MatrixFormatInteractionState) -> Unit)? = { attributes, pos, _ ->
         if (attributes.bgColor != null) {
+            val rect = pos.rect
             drawRect(
                 Color(attributes.bgColor),
-                topLeft = position.topLeft,
-                size = position.size,
+                topLeft = rect.topLeft,
+                size = rect.size,
             )
         }
     },
-    val drawAboveSpan: (DrawScope.(SpanAttributes, Rect, MatrixFormatInteractionState) -> Unit)? = { attributes, position, state ->
+    val drawAboveSpan: (DrawScope.(SpanAttributes, DrawPosition.InLine, MatrixFormatInteractionState) -> Unit)? = { attributes, pos, state ->
         if (attributes.isSpoiler && attributes.revealId !in state.expandedItems.value) {
+            val rect = pos.rect
             drawRoundRect(
                 defaultForegroundColor,
-                topLeft = position.topLeft,
-                size = position.size,
+                topLeft = rect.topLeft,
+                size = rect.size,
                 cornerRadius = CornerRadius(4f * density, 4f * density)
             )
         }
     },
-    val drawBehindDetailsSummary: (DrawScope.(revealId: Int, Rect, MatrixFormatInteractionState) -> Unit)? = null,
-    val drawBehindDetailsSummaryFirstLine: (DrawScope.(revealId: Int, Rect, MatrixFormatInteractionState) -> Unit)? = { revealId, position, state ->
+    val drawBehindDetailsSummary: (DrawScope.(revealId: Int, DrawPosition.Block, MatrixFormatInteractionState) -> Unit)? = null,
+    val drawBehindDetailsSummaryFirstLine: (DrawScope.(revealId: Int, DrawPosition.InLine, MatrixFormatInteractionState) -> Unit)? = { revealId, pos, state ->
+        val rect = pos.rect
         // Use line height and available width as baseline size for triangle size
-        val lineHeight = position.size.height
+        val lineHeight = rect.size.height
         val triangleSideLength = lineHeight / 2f
         // * sqrt(3) / 2
         val triangleHeight = triangleSideLength * 0.8660254f
@@ -100,13 +121,17 @@ data class MatrixBodyDrawStyle(
             translate(
                 Offset(
                     // Center between text start and
-                    position.left + canvasPadding,
+                    if (pos.isRtl) {
+                        rect.right - triangleSideLength + canvasPadding
+                    } else {
+                        rect.left + canvasPadding
+                    },
                     // Center in line height
-                    position.top + canvasPadding,
+                    rect.top + canvasPadding,
                 )
             )
         }
         drawPath(trianglePath, defaultForegroundColor)
     },
-    val drawBehindDetailsContent: (DrawScope.(revealId: Int, Rect, MatrixFormatInteractionState) -> Unit)? = null,
+    val drawBehindDetailsContent: (DrawScope.(revealId: Int, DrawPosition.Block, MatrixFormatInteractionState) -> Unit)? = null,
 )

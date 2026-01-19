@@ -27,7 +27,6 @@ fun FooterOverlayLayout(
     val density = LocalDensity.current
     val horizontalPaddingPx = density.run { horizontalPadding.roundToPx() }
     val verticalPaddingPx = density.run { verticalPadding.roundToPx() }
-    // TODO RTL?
     Layout(
         modifier = modifier,
         content = {
