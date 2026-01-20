@@ -12,7 +12,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlin.math.max
 
 class MatrixFormatOnTextRenderResult(
-    internal val userMentions: ImmutableList<Pair<String, DrawPosition.InLine>>,
+    internal val userMentions: ImmutableList<Pair<MatrixToLink.UserMention, DrawPosition.InLine>>,
     internal val roomMentions: ImmutableList<DrawPosition.InLine>,
     internal val blockQuotes: ImmutableList<Pair<Int, DrawPosition.Block>>,
     internal val inlineCode: ImmutableList<DrawPosition.InLine>,

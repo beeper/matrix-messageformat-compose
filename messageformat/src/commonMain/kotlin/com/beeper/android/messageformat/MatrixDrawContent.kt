@@ -54,8 +54,14 @@ fun MatrixBodyRenderState.onMatrixBodyLayout(
     }
     // Find user mention bounding boxes if we want to post-process them
     val userMentions = flatMapAnnotationsIfSet(style.drawBehindUserMention, MatrixBodyAnnotations.USER_MENTION) { annotation ->
+        val mention = try {
+            Json.decodeFromString<MatrixToLink>(annotation.item) as MatrixToLink.UserMention
+        } catch (e: Exception) {
+            Logger.withTag("MatrixBodyDrawBehind").e("Mention data parsing error", e)
+            return@flatMapAnnotationsIfSet emptyList()
+        }
         layoutResult.perLineBoundingBoxesForRange(annotation.start, annotation.end).map {
-            Pair(annotation.item, it)
+            Pair(mention, it)
         }
     }
     // Find block quotes
