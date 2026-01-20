@@ -32,7 +32,7 @@ data class MatrixBodyPreFormatStyle(
  */
 data class MatrixBodyDrawStyle(
     val defaultForegroundColor: Color = Color.Gray,
-    val drawBehindUserMention: (DrawScope.(String, DrawPosition.InLine) -> Unit)? = { _, pos ->
+    val drawBehindUserMention: (DrawScope.(MatrixToLink.UserMention, DrawPosition.InLine) -> Unit)? = { _, pos ->
         val rect = pos.rect
         drawRoundRect(
             Color.Blue,
