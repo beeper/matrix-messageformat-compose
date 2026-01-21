@@ -1,7 +1,6 @@
 package com.beeper.android.messageformat
 
 import androidx.compose.foundation.text.appendInlineContent
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.AnnotatedString.Builder
 import androidx.compose.ui.text.SpanStyle
