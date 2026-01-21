@@ -320,7 +320,7 @@ class MatrixHtmlParser(
                 withAnnotation(MatrixBodyAnnotations.BLOCK_QUOTE, blockDepth.toString()) {
                     appendNodes(el.childNodes(), innerCtx, resultMeta) ?: PreviousRenderedInfo(nextShouldTrimBlank = true)
                 }
-                PreviousRenderedInfo(nextShouldTrimBlank = true)
+                PreviousRenderedInfo(nextShouldTrimBlank = true, hasImplicitNewline = true)
             }
             "pre" -> {
                 if (previousRenderedInfo?.nextShouldTrimBlank == false) {
@@ -575,7 +575,8 @@ class MatrixHtmlParser(
             is TextNode -> it.isBlank && subList(1, size).hasImplicitNewline()
             is Element -> when (it.normalName()) {
                 "ul",
-                "ol" -> true
+                "ol",
+                 "blockquote" -> true
                 else -> false
             }
             else -> false
