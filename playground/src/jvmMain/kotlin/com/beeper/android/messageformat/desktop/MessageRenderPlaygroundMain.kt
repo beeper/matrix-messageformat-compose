@@ -63,7 +63,7 @@ fun TextRenderScreen() {
     var renderScale by remember { mutableFloatStateOf(2f) }
     var fontScale by remember { mutableFloatStateOf(1f) }
     var textInput by remember { mutableStateOf(EXAMPLE_MESSAGE) }
-    var footerText by remember { mutableStateOf("") }
+    var footerText by remember { mutableStateOf("⏲") }
     var parseResult by remember { mutableStateOf(MatrixBodyParseResult("")) }
     var allowRoomMention by remember { mutableStateOf(true) }
     var newlineDbg by remember { mutableStateOf(false) }
@@ -71,6 +71,7 @@ fun TextRenderScreen() {
     var forceWrapWidth by remember { mutableStateOf(false) }
     var inverseLayout by remember { mutableStateOf(false) }
     var rtlText by remember { mutableStateOf(false) }
+    var withFooter by remember { mutableStateOf(false) }
     val parser = remember(newlineDbg) { MatrixHtmlParser(newlineDbg = newlineDbg) }
     val renderTextStyle = MaterialTheme.typography.bodyLarge
     val baseDensity = LocalDensity.current
@@ -144,7 +145,9 @@ fun TextRenderScreen() {
                             )
                         },
                         overlay = {
-                            Text(footerText)
+                            if (withFooter) {
+                                Text(footerText)
+                            }
                         },
                         forceWrapWidth = forceWrapWidth,
                         modifier = if (wrapWidth) {
@@ -222,6 +225,15 @@ fun TextRenderScreen() {
                         checked = rtlText,
                         onCheckedChange = { rtlText = it })
                 }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Footer:")
+                    Switch(
+                        checked = withFooter,
+                        onCheckedChange = { withFooter = it })
+                }
             }
             Text(
                 "Input:",
@@ -233,16 +245,18 @@ fun TextRenderScreen() {
                 onValueChange = { textInput = it },
                 modifier = Modifier.fillMaxSize().weight(1f),
             )
-            Text(
-                "Footer:",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            TextField(
-                value = footerText,
-                onValueChange = { footerText = it },
-                modifier = Modifier.fillMaxWidth(),
-            )
+            if (withFooter) {
+                Text(
+                    "Footer:",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                TextField(
+                    value = footerText,
+                    onValueChange = { footerText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }

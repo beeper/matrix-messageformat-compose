@@ -13,8 +13,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.serialization.json.Json
-import kotlin.math.max
-import kotlin.math.min
 
 sealed interface DrawPosition {
     val rect: Rect
