@@ -24,6 +24,8 @@ internal const val VERBOSE_DBG = true
 
 const val MENTION_ROOM = "@room"
 
+typealias Lookahead = List<Node>
+
 /**
  * Parse `formatted_body` Matrix HTML into [AnnotatedString] for rendering, first step without any styling that may be
  * theme- or density-related. Second step is handled by [MatrixBodyStyledFormatter].
@@ -63,6 +65,9 @@ class MatrixHtmlParser(
 
     private data class PreviousRenderedInfo(
         val nextShouldTrimBlank: Boolean = false,
+        // If MatrixBodyStyledFormatter will add a paragraph style, it will ensure a newline for us,
+        // in which case we sometimes may want to omit explicit newlines.
+        val hasImplicitNewline: Boolean = false,
     )
 
     private data class OrderedListScope(
@@ -129,7 +134,7 @@ class MatrixHtmlParser(
 
     private fun Builder.appendNode(
         node: Node,
-        lookahead: List<Node>,
+        lookahead: Lookahead,
         previousRenderedInfo: PreviousRenderedInfo?,
         ctx: RenderContext,
         resultMeta: RenderResultMeta,
@@ -143,7 +148,7 @@ class MatrixHtmlParser(
 
     private fun Builder.appendText(
         node: TextNode,
-        lookahead: List<Node>,
+        lookahead: Lookahead,
         previous: PreviousRenderedInfo?,
         ctx: RenderContext,
     ): PreviousRenderedInfo? {
@@ -238,7 +243,7 @@ class MatrixHtmlParser(
 
     private fun Builder.appendElement(
         el: Element,
-        lookahead: List<Node>,
+        lookahead: Lookahead,
         previousRenderedInfo: PreviousRenderedInfo?,
         ctx: RenderContext,
         resultMeta: RenderResultMeta,
@@ -292,7 +297,7 @@ class MatrixHtmlParser(
             // Block containers
             "p", "div" -> {
                 if (previousRenderedInfo?.nextShouldTrimBlank == false) {
-                    ensureNewlineSeparation("p1")
+                    ensureNewlineSeparation("p1", null)
                 }
                 val start = length
                 appendNodes(el.childNodes(), ctx, resultMeta)
@@ -300,9 +305,11 @@ class MatrixHtmlParser(
                 if (lookahead.shouldTrimEncompassingWhitespace() || start == end) {
                     PreviousRenderedInfo()
                 } else {
-                    appendNewline("p2")
-                    if (normalName == "p" && lookahead.firstNotEmpty()?.normalName() == "p") {
-                        appendNewline("p3")
+                    if (!lookahead.hasImplicitNewline()) {
+                        appendNewline("p2")
+                        if (normalName == "p" && lookahead.firstNotEmpty()?.normalName() == "p") {
+                            appendNewline("p3")
+                        }
                     }
                     PreviousRenderedInfo(nextShouldTrimBlank = true)
                 }
@@ -313,33 +320,44 @@ class MatrixHtmlParser(
                 withAnnotation(MatrixBodyAnnotations.BLOCK_QUOTE, blockDepth.toString()) {
                     appendNodes(el.childNodes(), innerCtx, resultMeta) ?: PreviousRenderedInfo(nextShouldTrimBlank = true)
                 }
-                PreviousRenderedInfo(nextShouldTrimBlank = true)
+                PreviousRenderedInfo(nextShouldTrimBlank = true, hasImplicitNewline = true)
             }
             "pre" -> {
                 if (previousRenderedInfo?.nextShouldTrimBlank == false) {
-                    ensureNewlineSeparation("pre1")
+                    ensureNewlineSeparation("pre1", null)
                 }
                 appendNodes(el.childNodes(), ctx.copy(preFormattedText = true), resultMeta) ?: PreviousRenderedInfo(nextShouldTrimBlank = true)
                 if (lookahead.shouldTrimEncompassingWhitespace()) {
                     PreviousRenderedInfo()
                 } else {
-                    ensureNewlineSeparation("pre2")
+                    ensureNewlineSeparation("pre2", lookahead)
                     PreviousRenderedInfo(nextShouldTrimBlank = true)
                 }
             }
             "br" -> {
-                appendNewline("br")
+                if (!lookahead.hasImplicitNewline()) {
+                    appendNewline("br")
+                } else if (previousRenderedInfo?.hasImplicitNewline == true) {
+                    // Somehow two implicit newlines after each other with nothing in between
+                    // cancel one of them out, unless we put *anything* in between?
+                    // Note that if we added an actual newline here, we would get two out of that.
+                    // Test case: (list, br, list) should have a visual separation between both
+                    // lists (one empty newline, not two)
+                    append(" ")
+                }
                 PreviousRenderedInfo(nextShouldTrimBlank = true)
             }
 
             // Horizontal divider line
             "hr" -> {
-                ensureNewlineSeparation("hr1")
+                ensureNewlineSeparation("hr1", null)
                 withAnnotation(MatrixBodyAnnotations.HORIZONTAL_RULE, "") {
                     // Ensure we get a bounding box via non-breakable space
                     append("\u00A0")
                 }
-                appendNewline("hr2")
+                if (!lookahead.hasImplicitNewline()) {
+                    appendNewline("hr2")
+                }
                 PreviousRenderedInfo(nextShouldTrimBlank = true)
             }
 
@@ -396,7 +414,7 @@ class MatrixHtmlParser(
                         ), resultMeta
                     ) ?: PreviousRenderedInfo(nextShouldTrimBlank = true)
                 }
-                PreviousRenderedInfo(nextShouldTrimBlank = true)
+                PreviousRenderedInfo(nextShouldTrimBlank = true, hasImplicitNewline = true)
             }
             "ol" -> {
                 withAnnotation(MatrixBodyAnnotations.ORDERED_LIST, ctx.indentedBlockDepth.toString()) {
@@ -409,7 +427,7 @@ class MatrixHtmlParser(
                         ), resultMeta
                     ) ?: PreviousRenderedInfo(nextShouldTrimBlank = true)
                 }
-                PreviousRenderedInfo(nextShouldTrimBlank = true)
+                PreviousRenderedInfo(nextShouldTrimBlank = true, hasImplicitNewline = true)
             }
             "li" -> {
                 val innerCtx = ctx.copy(indentedBlockDepth = ctx.indentedBlockDepth + 1)
@@ -527,7 +545,7 @@ class MatrixHtmlParser(
         }
     }
 
-    private fun List<Node>.shouldTrimEncompassingWhitespace(): Boolean {
+    private fun Lookahead.shouldTrimEncompassingWhitespace(): Boolean {
         return when (val it = firstOrNull()) {
             is TextNode -> it.isBlank && subList(1, size).shouldTrimEncompassingWhitespace()
             is Element -> when (it.normalName()) {
@@ -543,6 +561,24 @@ class MatrixHtmlParser(
                 else -> true
             }
             null -> true
+            else -> false
+        }
+    }
+
+    /**
+     * If an item has an **implicit** newline, that usually means [MatrixBodyStyledFormatter]
+     * will render it with a paragraph style (that implies a newline).
+     * This does *not* include *explicit* newlines e.g. via <br> or <p> tags.
+     */
+    private fun Lookahead.hasImplicitNewline(): Boolean {
+        return when (val it = firstOrNull()) {
+            is TextNode -> it.isBlank && subList(1, size).hasImplicitNewline()
+            is Element -> when (it.normalName()) {
+                "ul",
+                "ol",
+                 "blockquote" -> true
+                else -> false
+            }
             else -> false
         }
     }
@@ -563,10 +599,13 @@ class MatrixHtmlParser(
     }
 
     // Append a newline if the builder does not already end with one and is not empty
-    private fun Builder.ensureNewlineSeparation(debugStr: String) {
+    private fun Builder.ensureNewlineSeparation(debugStr: String, lookahead: Lookahead?) {
         val current = toAnnotatedString()
         if (current.paragraphStyles.any { it.end == current.length }) {
             // Just finished a paragraph, no need to add a newline
+            return
+        }
+        if (lookahead?.hasImplicitNewline() == true) {
             return
         }
         if (current.isNotEmpty() && !current.text.endsWith('\n')) appendNewline(debugStr)
