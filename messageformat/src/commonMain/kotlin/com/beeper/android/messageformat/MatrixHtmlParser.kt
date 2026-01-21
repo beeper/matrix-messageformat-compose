@@ -65,6 +65,9 @@ class MatrixHtmlParser(
 
     private data class PreviousRenderedInfo(
         val nextShouldTrimBlank: Boolean = false,
+        // If MatrixBodyStyledFormatter will add a paragraph style, it will ensure a newline for us,
+        // in which case we sometimes may want to omit explicit newlines.
+        val hasImplicitNewline: Boolean = false,
     )
 
     private data class OrderedListScope(
@@ -334,6 +337,13 @@ class MatrixHtmlParser(
             "br" -> {
                 if (!lookahead.hasImplicitNewline()) {
                     appendNewline("br")
+                } else if (previousRenderedInfo?.hasImplicitNewline == true) {
+                    // Somehow two implicit newlines after each other with nothing in between
+                    // cancel one of them out, unless we put *anything* in between?
+                    // Note that if we added an actual newline here, we would get two out of that.
+                    // Test case: (list, br, list) should have a visual separation between both
+                    // lists (one empty newline, not two)
+                    append(" ")
                 }
                 PreviousRenderedInfo(nextShouldTrimBlank = true)
             }
@@ -404,7 +414,7 @@ class MatrixHtmlParser(
                         ), resultMeta
                     ) ?: PreviousRenderedInfo(nextShouldTrimBlank = true)
                 }
-                PreviousRenderedInfo(nextShouldTrimBlank = true)
+                PreviousRenderedInfo(nextShouldTrimBlank = true, hasImplicitNewline = true)
             }
             "ol" -> {
                 withAnnotation(MatrixBodyAnnotations.ORDERED_LIST, ctx.indentedBlockDepth.toString()) {
@@ -417,7 +427,7 @@ class MatrixHtmlParser(
                         ), resultMeta
                     ) ?: PreviousRenderedInfo(nextShouldTrimBlank = true)
                 }
-                PreviousRenderedInfo(nextShouldTrimBlank = true)
+                PreviousRenderedInfo(nextShouldTrimBlank = true, hasImplicitNewline = true)
             }
             "li" -> {
                 val innerCtx = ctx.copy(indentedBlockDepth = ctx.indentedBlockDepth + 1)
