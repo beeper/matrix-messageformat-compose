@@ -2,6 +2,7 @@ package com.beeper.android.messageformat.desktop
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -181,59 +182,13 @@ fun TextRenderScreen() {
             }
             // Wrap toggles in column to have narrower arrangement
             FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Allow room mentions:")
-                    Switch(checked = allowRoomMention, onCheckedChange = { allowRoomMention = it })
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Debug newlines:")
-                    Switch(checked = newlineDbg, onCheckedChange = { newlineDbg = it })
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Wrap width:")
-                    Switch(checked = wrapWidth, onCheckedChange = { wrapWidth = it })
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Force layout wrap width:")
-                    Switch(checked = forceWrapWidth, onCheckedChange = { forceWrapWidth = it })
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Inverse layout:")
-                    Switch(checked = inverseLayout, onCheckedChange = { inverseLayout = it })
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("RTL text:")
-                    Switch(
-                        checked = rtlText,
-                        onCheckedChange = { rtlText = it })
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Footer:")
-                    Switch(
-                        checked = withFooter,
-                        onCheckedChange = { withFooter = it })
-                }
+                ToggleRow("Allow room mentions", allowRoomMention) { allowRoomMention = it }
+                ToggleRow("Debug newlines", newlineDbg) { newlineDbg = it }
+                ToggleRow("Wrap width", wrapWidth) { wrapWidth = it }
+                ToggleRow("Force layout wrap width", forceWrapWidth) { forceWrapWidth = it }
+                ToggleRow("Inverse layout", inverseLayout) { inverseLayout = it }
+                ToggleRow("RTL text", rtlText) { rtlText = it }
+                ToggleRow("Footer", withFooter) { withFooter = it }
             }
             Text(
                 "Input:",
@@ -258,6 +213,20 @@ fun TextRenderScreen() {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ToggleRow(text: String, checked: Boolean, onCheckChange: (Boolean) -> Unit) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.clickable {
+            onCheckChange(!checked)
+        }
+    ) {
+        Switch(checked = checked, onCheckedChange = onCheckChange)
+        Text(text)
     }
 }
 
