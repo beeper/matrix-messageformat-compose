@@ -49,7 +49,7 @@ fun FooterOverlayLayout(
         val maxAvailableWidth = constraints.maxWidth
 
         val lastLineWidthWithHorizontalOverlay = lastLineWidth +
-                (overlayPlaceable?.let { it.width + horizontalPaddingPx } ?: 0)
+                (overlayPlaceable?.width?.takeIf { it > 0 }?.let { it + horizontalPaddingPx } ?: 0)
 
         val textMaxWidth = if (forceWrapWidth && textLayoutResult.lineCount > 0) {
             (0..<textLayoutResult.lineCount).maxOf { line ->
@@ -74,7 +74,7 @@ fun FooterOverlayLayout(
             // Needs a new line
             val width = max(textMaxWidth, overlayPlaceable?.width ?: 0)
             val height = textPlaceable.height +
-                    (overlayPlaceable?.let { it.height + verticalPaddingPx } ?: 0)
+                    (overlayPlaceable?.height?.takeIf { it > 0 }?.let { it + verticalPaddingPx } ?: 0)
             layout(width, height) {
                 textPlaceable.place(0, 0)
                 overlayPlaceable?.place(
