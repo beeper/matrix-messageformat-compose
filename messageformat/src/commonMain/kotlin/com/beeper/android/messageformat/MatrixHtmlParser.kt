@@ -20,7 +20,7 @@ import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 
-internal const val VERBOSE_DBG = true
+internal const val VERBOSE_DBG = false
 
 const val MENTION_ROOM = "@room"
 
