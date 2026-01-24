@@ -16,6 +16,7 @@ import kotlinx.collections.immutable.toPersistentMap
 import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.serialization.json.Json
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
@@ -91,17 +92,26 @@ class MatrixHtmlParser(
             .replace("<br/> ", "<br/>")
             .replace("<p> ", "<p>")
         val doc = Jsoup.parseBodyFragment(compressed)
-        val body = doc.body()
         val jsoupTs = System.currentTimeMillis()
+        return parseHtml(doc, style, allowRoomMention).also {
+            if (VERBOSE_DBG) {
+                val now = System.currentTimeMillis()
+                log.v("Parsed in ${now - ts} (${jsoupTs - ts} + ${now - jsoupTs}) ms; len=${input.length}->${it.text.length}; thread ${Thread.currentThread().name}")
+            }
+        }
+    }
+
+    /** Parse an already parsed jsoup DOM into a pre-processed annotated string, ready for further styling. */
+    fun parseHtml(
+        doc: Document,
+        style: MatrixBodyPreFormatStyle,
+        allowRoomMention: Boolean,
+    ): MatrixBodyParseResult {
+        val body = doc.body()
         val resultMeta = RenderResultMeta()
         val annotatedString = buildAnnotatedString {
             val ctx = RenderContext(style, allowRoomMention)
             appendNodes(body.childNodes(), ctx, resultMeta)
-        }.also {
-            if (VERBOSE_DBG) {
-                val now = System.currentTimeMillis()
-                log.v("Parsed in ${now - ts} (${jsoupTs - ts} + ${now - jsoupTs}) ms; len=${input.length}->${it.length}; thread ${Thread.currentThread().name}")
-            }
         }
         return resultMeta.toResult(annotatedString)
     }
