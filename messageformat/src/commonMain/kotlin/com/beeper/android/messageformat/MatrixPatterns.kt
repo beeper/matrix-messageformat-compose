@@ -9,7 +9,11 @@ object MatrixPatterns {
     // This does not enforce strict rules as per spec but is a bit more permissive just in case.
     val USER_ID_REGEX = Regex("""@.*:.+""")
     val ROOM_ID_REGEX = Regex("""!.+""")
+    val ROOM_ALIAS_REGEX = Regex("""#.*:.+""")
     val MESSAGE_ID_REGEX = Regex("""\$.+""")
+
+    private fun String.isRoomIdOrAlias() =
+        ROOM_ID_REGEX.matches(this) || ROOM_ALIAS_REGEX.matches(this)
 
     fun parseMatrixToUrl(url: String): MatrixToLink? {
         if (!url.startsWith(MATRIX_TO_LINK_PREFIX)) {
@@ -32,13 +36,13 @@ object MatrixPatterns {
                 if (USER_ID_REGEX.matches(segment)) {
                     return MatrixToLink.UserMention(segment, url)
                 }
-                if (ROOM_ID_REGEX.matches(segment)) {
+                if (segment.isRoomIdOrAlias()) {
                     val via = parsed.parameters.getAll("via")
                     return MatrixToLink.RoomLink(segment, via, url)
                 }
             }
             2 -> {
-                if (ROOM_ID_REGEX.matches(segments[0]) && MESSAGE_ID_REGEX.matches(segments[1])) {
+                if (segments[0].isRoomIdOrAlias() && MESSAGE_ID_REGEX.matches(segments[1])) {
                     val via = parsed.parameters.getAll("via")
                     return MatrixToLink.MessageLink(segments[0], segments[1], via, url)
                 }
