@@ -20,16 +20,17 @@ object MatrixPatterns {
             return null
         }
         val parsed = try {
-            // ktor ignores things starting with '#' so strip the prefix and treat it as server-relative url
-            Url("/" + url.removePrefix(MATRIX_TO_LINK_PREFIX))
+            // Need to escape the '#' found in plaintext in many matrix.to urls
+            // sent within matrix clients, to not confuse ktor
+            Url(url.replace("#", "%23"))
         } catch (_: Exception) {
             return null
         }
-        if (parsed.pathSegments.isEmpty()) {
+        if (parsed.pathSegments.size <= 2) {
             return null
         }
-        // First segment is just blank
-        val segments = parsed.pathSegments.subList(1, parsed.pathSegments.size)
+        // First segment is just blank, second is just the '#'
+        val segments = parsed.pathSegments.subList(2, parsed.pathSegments.size)
         when (segments.size) {
             1 -> {
                 val segment = segments.first()
