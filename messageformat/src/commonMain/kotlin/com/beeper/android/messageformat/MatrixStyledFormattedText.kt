@@ -84,13 +84,12 @@ fun defaultMatrixBodyStyledFormatter(textStyle: TextStyle = LocalTextStyle.curre
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
     val urlHandler = LocalUriHandler.current
-    return remember(density, textMeasurer, textStyle) {
+    return remember(density, textMeasurer, textStyle, urlHandler) {
         DefaultMatrixBodyStyledFormatter(
             density = density,
             textMeasurer = textMeasurer,
             textStyle = textStyle,
-        ) {
-            urlHandler.openUri(it)
-        }
+            handleWebLinkClick = urlHandler::openUri,
+        )
     }
 }
