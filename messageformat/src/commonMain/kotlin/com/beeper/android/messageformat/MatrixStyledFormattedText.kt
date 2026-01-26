@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -82,11 +83,13 @@ fun MatrixStyledFormattedText(
 fun defaultMatrixBodyStyledFormatter(textStyle: TextStyle = LocalTextStyle.current): DefaultMatrixBodyStyledFormatter {
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
-    return remember(density, textMeasurer, textStyle) {
+    val urlHandler = LocalUriHandler.current
+    return remember(density, textMeasurer, textStyle, urlHandler) {
         DefaultMatrixBodyStyledFormatter(
             density = density,
             textMeasurer = textMeasurer,
             textStyle = textStyle,
+            handleWebLinkClick = urlHandler::openUri,
         )
     }
 }

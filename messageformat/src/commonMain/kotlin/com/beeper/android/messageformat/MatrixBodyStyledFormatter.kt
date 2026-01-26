@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import co.touchlab.kermit.Logger
 import kotlinx.serialization.json.Json
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.collections.plus
 
 /**
  * Prepare an [androidx.compose.ui.text.AnnotatedString] output by [MatrixHtmlParser]
@@ -204,7 +205,10 @@ open class DefaultMatrixBodyStyledFormatter(
     private val listBulletForDepth: (depth: Int) -> String = { DEFAULT_UNORDERED_BULLET_STRING },
     private val urlStyle: TextLinkStyles? = TextLinkStyles(style = SpanStyle(color = Color.Blue, textDecoration = TextDecoration.Underline)),
     private val clickToRevealStyle: TextLinkStyles? = TextLinkStyles(),
+    private val handleWebLinkClick: (String) -> Unit,
 ) : MatrixBodyStyledFormatter() {
+
+    private val log = Logger.withTag("MatrixBodyDefaultFormat")
 
     init {
         if (!blockIndention.isSp) {
@@ -277,6 +281,50 @@ open class DefaultMatrixBodyStyledFormatter(
     }
 
     /**
+     * When handling link clicks, these are invoked based on the smallest annotation, but in case
+     * of clickable spoiler tags, we must intercept this, such that clicking a link hidden in a
+     * spoiler still reveals the spoiler, rather than clicking it without the user even seeing it.
+     *
+     * @return true if the link was consumed, false if not and downstream implementations should
+     *  continue with their link click logic.
+     */
+    open fun interceptLinkClicks(context: FormatContext, ownRevealId: Int? = null): Boolean {
+        val encompassingSpans = context.input.text.getStringAnnotations(
+            MatrixBodyAnnotations.SPAN,
+            context.start,
+            context.end,
+        ).filter {
+            // Not partial spoilers, only fully encompassing ones are interesting here
+            it.start <= context.start && it.end >= context.end
+        }
+        val conflictingSpoilers = encompassingSpans.mapNotNull {
+            val attributes = try {
+                Json.decodeFromString<SpanAttributes>(it.item)
+            } catch (e: Exception) {
+                log.e("Span data parsing error", e)
+                return@mapNotNull null
+            }
+            if (ownRevealId == attributes.revealId) {
+                // We only want to check *encompassing* spans, not the span itself recursively
+                return@mapNotNull null
+            }
+            // Only allow links within spoilers, if the spoiler has already been revealed
+            if (attributes.isSpoiler && attributes.revealId !in context.state.expandedItems.value) {
+                Pair(it, attributes)
+            } else {
+                null
+            }
+        }
+        return if (conflictingSpoilers.isEmpty()) {
+            false
+        } else {
+            val spoilerToTrigger = conflictingSpoilers.maxBy { it.first.end - it.first.start }
+            context.state.expandedItems.value += spoilerToTrigger.second.revealId
+            true
+        }
+    }
+
+    /**
      * When nesting paragraphs within paragraphs, by default we do not inherit the parent style,
      * but rather overwrite it. So in order to respect block indention, we need to lookup the
      * current parent's paragraph style.
@@ -325,13 +373,16 @@ open class DefaultMatrixBodyStyledFormatter(
     }
 
     open fun clickToRevealAnnotation(
-        state: MatrixFormatInteractionState,
+        context: FormatContext,
         revealId: Int
     ) = LinkAnnotation.Clickable(MatrixBodyAnnotations.CLICK_TO_REVEAL, clickToRevealStyle) {
-        if (revealId in state.expandedItems.value) {
-            state.expandedItems.value -= revealId
+        if (interceptLinkClicks(context, revealId)) {
+            return@Clickable
+        }
+        if (revealId in context.state.expandedItems.value) {
+            context.state.expandedItems.value -= revealId
         } else {
-            state.expandedItems.value += revealId
+            context.state.expandedItems.value += revealId
         }
     }
 
@@ -339,7 +390,7 @@ open class DefaultMatrixBodyStyledFormatter(
         return listOfNotNull(
             attributes.fgColor?.let { SpanStyle(color = Color(it)) },
             if (attributes.isSpoiler) {
-                clickToRevealAnnotation(context.state, attributes.revealId)
+                clickToRevealAnnotation(context, attributes.revealId)
             } else {
                 null
             }
@@ -388,7 +439,12 @@ open class DefaultMatrixBodyStyledFormatter(
             "http://$href"
         }
         return listOf(
-            LinkAnnotation.Url(url, urlStyle),
+            LinkAnnotation.Url(url, urlStyle) {
+                if (interceptLinkClicks(context)) {
+                    return@Url
+                }
+                handleWebLinkClick(url)
+            },
         )
     }
 
@@ -406,7 +462,7 @@ open class DefaultMatrixBodyStyledFormatter(
     ): List<AnnotatedString.Annotation>? {
         return listOf(
             baseParagraphStyle(context),
-            clickToRevealAnnotation(context.state, revealId)
+            clickToRevealAnnotation(context, revealId)
         )
     }
 
