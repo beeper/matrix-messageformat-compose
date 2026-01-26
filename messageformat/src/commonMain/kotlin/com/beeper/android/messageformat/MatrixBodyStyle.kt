@@ -120,11 +120,10 @@ data class MatrixBodyDrawStyle(
             val canvasPadding = (lineHeight - triangleSideLength) / 2
             translate(
                 Offset(
-                    // Center between text start and
                     if (pos.isRtl) {
                         rect.right - triangleSideLength + canvasPadding
                     } else {
-                        rect.left + canvasPadding
+                        rect.left
                     },
                     // Center in line height
                     rect.top + canvasPadding,
