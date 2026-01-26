@@ -8,7 +8,7 @@ internal const val EXAMPLE_MESSAGE = """
 <h2>Very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header</h2>
 <p>collapsed stuff with inline image <img src='mxc://local.beeper.com/spiritcroc_TnTnE9q1fOXD0gtA9UlcBrStvCVLWwAbAtKcAIOKqWJRtQeZwsniGSRVA8xV51tB' alt='Example image' width='200' height='100' data-mx-emoticon>.</p>
 <p><font data-mx-bg-color='#ff00ff'>Long text with background long text with background long text with background long text with background long text with background long text with background long text with background long text with background long text with background long text with background long</font></p>
-<p>Spoiler <span data-mx-spoiler>alert!</span></p>
+<p>Spoiler <span data-mx-spoiler>alert! Link that shouldn't be clickable unless spoiler is revealed: https://beeper.com</span></p>
 </details>
 
 <pre><code>Multiline code
