@@ -381,8 +381,13 @@ open class DefaultMatrixBodyStyledFormatter(
     }
 
     override fun formatWebLink(href: String, context: FormatContext): List<AnnotatedString.Annotation>? {
+        val url = if (href.contains("://")) {
+            href
+        } else {
+            "http://$href"
+        }
         return listOf(
-            LinkAnnotation.Url(href, urlStyle),
+            LinkAnnotation.Url(url, urlStyle),
         )
     }
 
