@@ -381,7 +381,8 @@ open class DefaultMatrixBodyStyledFormatter(
     }
 
     override fun formatWebLink(href: String, context: FormatContext): List<AnnotatedString.Annotation>? {
-        val url = if (href.contains("://")) {
+        val hasScheme = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*:").containsMatchIn(href)
+        val url = if (hasScheme) {
             href
         } else {
             "http://$href"
