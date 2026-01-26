@@ -310,7 +310,15 @@ class MatrixHtmlParser(
                     ensureNewlineSeparation("p1", null)
                 }
                 val start = length
-                appendNodes(el.childNodes(), ctx, resultMeta)
+                appendNodes(
+                    el.childNodes(),
+                    ctx,
+                    resultMeta,
+                    firstPreviousRenderedInfo = PreviousRenderedInfo(
+                        nextShouldTrimBlank = true,
+                        hasImplicitNewline = true,
+                    )
+                )
                 val end = length
                 if (lookahead.shouldTrimEncompassingWhitespace() || start == end) {
                     PreviousRenderedInfo()
@@ -378,7 +386,12 @@ class MatrixHtmlParser(
                 val matrixLink = MatrixPatterns.parseMatrixToUrl(href)
                 if (matrixLink == null) {
                     withAnnotation(MatrixBodyAnnotations.WEB_LINK, href) {
-                        appendNodes(el.childNodes(), ctx.copy(linkUrl = href), resultMeta) ?: PreviousRenderedInfo()
+                        appendNodes(
+                            el.childNodes(),
+                            ctx.copy(linkUrl = href),
+                            resultMeta,
+                            firstPreviousRenderedInfo = previousRenderedInfo,
+                        ) ?: PreviousRenderedInfo()
                     }
                 } else {
                     val (annotation, format) = when (matrixLink) {
