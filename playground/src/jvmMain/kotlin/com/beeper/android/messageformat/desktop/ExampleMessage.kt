@@ -14,6 +14,7 @@ internal const val EXAMPLE_MESSAGE = """
 <pre><code>Multiline code
 with a newline
 and another one
+and some url that shouldn't render as mention: https://matrix.to/#/@spiritcroc:matrix.org
 </code></pre>
 
 <p>

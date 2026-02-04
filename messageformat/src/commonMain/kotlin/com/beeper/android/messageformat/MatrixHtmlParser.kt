@@ -220,8 +220,13 @@ class MatrixHtmlParser(
                 val startInText = matcher.start()
                 val endInText = matcher.end()
                 val url = text.substring(startInText, endInText)
-                // Handle matrix.to links specifically for user mentions and room / message links
-                val matrixLink = MatrixPatterns.parseMatrixToUrl(url)
+                // Handle matrix.to links specifically for user mentions and room / message links,
+                // if not in a preformatted text block
+                val matrixLink = if (ctx.preFormattedText) {
+                    null
+                } else {
+                    MatrixPatterns.parseMatrixToUrl(url)
+                }
                 // Custom formatting of auto-linked url contents disabled for now - let's call it a feature, maybe it wasn't supposed to be a link?
                 val tag = when (matrixLink) {
                     is MatrixToLink.UserMention -> MatrixBodyAnnotations.USER_MENTION
