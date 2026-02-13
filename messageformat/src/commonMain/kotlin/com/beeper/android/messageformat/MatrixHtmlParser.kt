@@ -222,7 +222,7 @@ class MatrixHtmlParser(
                     this@innerBuilder.append(source.substring(currentSourceIndex, tabSourceIndex))
                     // Was the last newline before or in this current text source?
                     val indexInLine = this@innerBuilder.toString().lastIndexOf('\n').takeIf { it >= 0 }?.let {
-                        this@innerBuilder.length - it
+                        this@innerBuilder.length - it - 1
                     } ?: (initialOffsetInLine + this@innerBuilder.length)
                     this@innerBuilder.append(
                         ctx.style.formatTab(

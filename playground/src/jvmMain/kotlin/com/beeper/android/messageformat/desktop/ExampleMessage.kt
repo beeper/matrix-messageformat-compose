@@ -22,7 +22,8 @@ c10y	450	546	96	21.33%
 conduit	507	525	18	3.55%
 dendri	380	365	-15	-3.95%
 </code></pre>
-</code></pre>
+<pre><code>synapse	11679	11894	215	1.84%</code></pre>
+<pre><code>c10y	450	546	96	21.33%</code></pre>
 
 <p>
 @room hey <a href="https://matrix.to/#/@spiritcroc:matrix.org">Mention</a>, check out this <a href='https://matrix.org'>link</a>
