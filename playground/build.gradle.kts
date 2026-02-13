@@ -33,3 +33,9 @@ kotlin {
         }
     }
 }
+
+compose.desktop {
+    application {
+        mainClass = "com.beeper.android.messageformat.desktop.MessageRenderPlaygroundMainKt"
+    }
+}
