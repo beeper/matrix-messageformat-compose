@@ -16,7 +16,7 @@ fun Modifier.linkLongPress(
     state: MatrixBodyRenderState,
     onOtherLongPress: (() -> Unit)? = null,
     onLinkLongPress: (LinkAnnotation) -> Unit,
-) = pointerInput(state.renderResult.value, onLinkLongPress) {
+) = pointerInput(state.renderResult, onLinkLongPress, onOtherLongPress) {
     awaitEachGesture {
         // Link annotations consume touches, but we need to get them anyway
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
