@@ -1,5 +1,7 @@
 package com.beeper.android.messageformat
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.LocalTextStyle
@@ -10,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -45,6 +48,9 @@ fun MatrixStyledFormattedText(
     minLines: Int = 1,
     inlineContent: Map<String, InlineTextContent>,
     onTextLayout: ((TextLayoutResult) -> Unit)? = null,
+    onLinkLongPress: ((LinkAnnotation) -> Unit)? = null,
+    onClick: (() -> Unit)? = null,
+    onLongPress: (() -> Unit)? = null,
 ) {
     val styledText = remember(formatter, parseResult, interactionState) {
         formatter.applyStyle(parseResult, interactionState)
@@ -55,6 +61,28 @@ fun MatrixStyledFormattedText(
         modifier = modifier.matrixBodyDrawWithContent(
             state = renderState,
             interactionState = interactionState,
+        ).then(
+            if (onLinkLongPress != null) {
+                Modifier.linkLongPress(
+                    state = renderState,
+                    onLinkLongPress = onLinkLongPress,
+                    onOtherLongPress = onLongPress,
+                ).then(
+                    if (onClick != null)
+                        Modifier.clickable(onClick = onClick)
+                    else
+                        Modifier
+                )
+            } else if (onLongPress != null) {
+                Modifier.combinedClickable(
+                    onClick = onClick ?: {},
+                    onLongClick = onLongPress,
+                )
+            } else if (onClick != null) {
+                modifier.clickable(onClick = onClick)
+            } else {
+                Modifier
+            }
         ),
         style = style,
         color = color,

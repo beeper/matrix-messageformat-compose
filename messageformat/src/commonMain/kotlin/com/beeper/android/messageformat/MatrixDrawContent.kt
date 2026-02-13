@@ -116,6 +116,7 @@ fun MatrixBodyRenderState.onMatrixBodyLayout(
     }
     // Result
     renderResult.value = MatrixFormatOnTextRenderResult(
+        textLayoutResult = layoutResult,
         userMentions = userMentions,
         roomMentions = roomMentions,
         blockQuotes = blockQuotes,

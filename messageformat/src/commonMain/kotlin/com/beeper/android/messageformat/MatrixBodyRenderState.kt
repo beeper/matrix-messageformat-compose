@@ -6,12 +6,14 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import co.touchlab.kermit.Logger
 import kotlinx.collections.immutable.ImmutableList
 import kotlin.math.max
 
 class MatrixFormatOnTextRenderResult(
+    val textLayoutResult: TextLayoutResult,
     internal val userMentions: ImmutableList<Pair<MatrixToLink.UserMention, DrawPosition.InLine>>,
     internal val roomMentions: ImmutableList<DrawPosition.InLine>,
     internal val blockQuotes: ImmutableList<Pair<Int, DrawPosition.Block>>,
