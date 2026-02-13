@@ -79,7 +79,7 @@ fun MatrixStyledFormattedText(
                     onLongClick = onLongPress,
                 )
             } else if (onClick != null) {
-                modifier.clickable(onClick = onClick)
+                Modifier.clickable(onClick = onClick)
             } else {
                 Modifier
             }
