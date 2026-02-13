@@ -1,3 +1,5 @@
+[![](https://www.jitpack.io/v/beeper/matrix-messageformat-compose.svg)](https://www.jitpack.io/#beeper/matrix-messageformat-compose)
+
 # matrix-messageformat-compose
 
 Kotlin multiplatform library to translate Matrix [formatted body](https://spec.matrix.org/unstable/client-server-api/#mroommessage-msgtypes) from HTML to `AnnotatedString` for native rendering in Jetpack Compose.
