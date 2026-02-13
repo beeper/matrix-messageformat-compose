@@ -15,7 +15,15 @@ internal const val EXAMPLE_MESSAGE = """
 with a newline
 and another one
 and some url that shouldn't render as mention: https://matrix.to/#/@spiritcroc:matrix.org
+
+Some numbers with tabs from TWIM:
+synapse	11679	11894	215	1.84%
+c10y	450	546	96	21.33%
+conduit	507	525	18	3.55%
+dendri	380	365	-15	-3.95%
 </code></pre>
+<pre><code>synapse	11679	11894	215	1.84%</code></pre>
+<pre><code>c10y	450	546	96	21.33%</code></pre>
 
 <p>
 @room hey <a href="https://matrix.to/#/@spiritcroc:matrix.org">Mention</a>, check out this <a href='https://matrix.org'>link</a>

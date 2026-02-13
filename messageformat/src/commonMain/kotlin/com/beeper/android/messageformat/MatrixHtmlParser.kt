@@ -48,6 +48,7 @@ class MatrixHtmlParser(
         val linkUrl: String? = null,
         val pendingBlankText: String? = null,
         val indentedBlockDepth: Int = 0,
+        val currentAnnotationTags: List<String> = emptyList(),
     ) {
         val shouldIgnoreWhitespace: Boolean
             get() = !preFormattedText && (unorderedListScope != null || orderedListScope != null)
@@ -198,22 +199,53 @@ class MatrixHtmlParser(
             var currentIndex = 0
             var roomMentionIndex = text.indexOf(MENTION_ROOM)
             while (roomMentionIndex >= 0) {
-                appendTextWithAutoLinkify(text.substring(currentIndex, roomMentionIndex), ctx)
+                appendPlaintextWithAutoFormat(text.substring(currentIndex, roomMentionIndex), ctx)
                 withAnnotation(MatrixBodyAnnotations.ROOM_MENTION, "") {
                     append(ctx.style.formatRoomMention())
                 }
                 currentIndex = roomMentionIndex + MENTION_ROOM.length
                 roomMentionIndex = text.indexOf(MENTION_ROOM, currentIndex)
             }
-            appendTextWithAutoLinkify(text.substring(currentIndex, text.length), ctx)
+            appendPlaintextWithAutoFormat(text.substring(currentIndex, text.length), ctx)
         } else {
-            appendTextWithAutoLinkify(text, ctx)
+            appendPlaintextWithAutoFormat(text, ctx)
         }
     }
 
-    private fun Builder.appendTextWithAutoLinkify(text: String, ctx: RenderContext) {
+    private fun Builder.applyTabFormat(source: String, ctx: RenderContext): String {
+        return if (ctx.style.formatTab != null) {
+            val initialOffsetInLine = toString().lastIndexOf('\n') + 1
+            buildString innerBuilder@{
+                var currentSourceIndex = 0
+                var tabSourceIndex = source.indexOf('\t')
+                while (tabSourceIndex >= 0) {
+                    this@innerBuilder.append(source.substring(currentSourceIndex, tabSourceIndex))
+                    // Was the last newline before or in this current text source?
+                    val indexInLine = this@innerBuilder.toString().lastIndexOf('\n').takeIf { it >= 0 }?.let {
+                        this@innerBuilder.length - it - 1
+                    } ?: (initialOffsetInLine + this@innerBuilder.length)
+                    this@innerBuilder.append(
+                        ctx.style.formatTab(
+                            ctx.currentAnnotationTags,
+                            indexInLine
+                        )
+                    )
+                    currentSourceIndex = tabSourceIndex + 1
+                    tabSourceIndex = source.indexOf('\t', currentSourceIndex)
+                }
+                this@innerBuilder.append(source.substring(currentSourceIndex, source.length))
+            }
+        } else {
+            source
+        }
+    }
+
+    private fun Builder.appendPlaintextWithAutoFormat(source: String, ctx: RenderContext): String {
         val appendStart = length
+        // Tab formatting
+        val text = applyTabFormat(source, ctx)
         append(text)
+        // Auto-linkification
         if (ctx.linkUrl == null && ctx.style.autoLinkUrlPattern != null) {
             val matcher = ctx.style.autoLinkUrlPattern.matcher(text)
             while (matcher.find()) {
@@ -242,6 +274,7 @@ class MatrixHtmlParser(
                 )
             }
         }
+        return text
     }
 
     private fun Builder.appendHeading(
@@ -250,7 +283,7 @@ class MatrixHtmlParser(
         resultMeta: RenderResultMeta,
     ): PreviousRenderedInfo {
         // No need to add additional newlines when adding a paragraph style!
-        withAnnotation(MatrixBodyAnnotations.HEADING, el.normalName()) {
+        withAnnotation(ctx, MatrixBodyAnnotations.HEADING, el.normalName()) { ctx ->
             appendNodes(el.childNodes(), ctx, resultMeta) ?: PreviousRenderedInfo(nextShouldTrimBlank = true)
         }
         return PreviousRenderedInfo(nextShouldTrimBlank = true)
@@ -280,7 +313,7 @@ class MatrixHtmlParser(
             }
             "code" -> {
                 val annotation = if (ctx.preFormattedText) MatrixBodyAnnotations.BLOCK_CODE else MatrixBodyAnnotations.INLINE_CODE
-                val nextPrevRenderInfo = withAnnotation(annotation, "") {
+                val nextPrevRenderInfo = withAnnotation(ctx, annotation, "") { ctx ->
                     appendNodes(el.childNodes(), ctx, resultMeta) ?: PreviousRenderedInfo()
                 }
                 if (ctx.preFormattedText) {
@@ -304,7 +337,7 @@ class MatrixHtmlParser(
                 if (attributes.isSpoiler) {
                     resultMeta.expandableItems.add(attributes.revealId)
                 }
-                withAnnotation(MatrixBodyAnnotations.SPAN, Json.encodeToString(attributes)) {
+                withAnnotation(ctx, MatrixBodyAnnotations.SPAN, Json.encodeToString(attributes)) { ctx ->
                     appendNodes(el.childNodes(), ctx, resultMeta) ?: PreviousRenderedInfo()
                 }
             }
@@ -340,7 +373,7 @@ class MatrixHtmlParser(
             "blockquote" -> {
                 val blockDepth = ctx.indentedBlockDepth + 1
                 val innerCtx = ctx.copy(indentedBlockDepth = blockDepth)
-                withAnnotation(MatrixBodyAnnotations.BLOCK_QUOTE, blockDepth.toString()) {
+                withAnnotation(innerCtx, MatrixBodyAnnotations.BLOCK_QUOTE, blockDepth.toString()) { innerCtx ->
                     appendNodes(el.childNodes(), innerCtx, resultMeta) ?: PreviousRenderedInfo(nextShouldTrimBlank = true)
                 }
                 PreviousRenderedInfo(nextShouldTrimBlank = true, hasImplicitNewline = true)
@@ -390,7 +423,7 @@ class MatrixHtmlParser(
                 // Handle matrix.to links specifically for user mentions and room / message links
                 val matrixLink = MatrixPatterns.parseMatrixToUrl(href)
                 if (matrixLink == null) {
-                    withAnnotation(MatrixBodyAnnotations.WEB_LINK, href) {
+                    withAnnotation(ctx, MatrixBodyAnnotations.WEB_LINK, href) { ctx ->
                         appendNodes(
                             el.childNodes(),
                             ctx.copy(linkUrl = href),
@@ -416,7 +449,7 @@ class MatrixHtmlParser(
                             }
                         }
                     }
-                    withAnnotation(annotation, Json.encodeToString(matrixLink)) {
+                    withAnnotation(ctx, annotation, Json.encodeToString(matrixLink)) { ctx ->
                         var previousRenderedInfo = PreviousRenderedInfo()
                         val content = buildAnnotatedString {
                             previousRenderedInfo = appendNodes(el.childNodes(), ctx.copy(linkUrl = href), resultMeta) ?: previousRenderedInfo
@@ -432,7 +465,7 @@ class MatrixHtmlParser(
                 // There's withBulletList too for unordered lists, but it is working unreliably with nested indention in combination with blockquotes,
                 // and it cannot render numbers, so for simplicity only do one implementation of lists that does not use withBulletList.
                 val bullet = ctx.style.listBulletForDepth(ctx.indentedBlockDepth)
-                withAnnotation(MatrixBodyAnnotations.UNORDERED_LIST, ctx.indentedBlockDepth.toString()) {
+                withAnnotation(ctx, MatrixBodyAnnotations.UNORDERED_LIST, ctx.indentedBlockDepth.toString()) { ctx ->
                     appendNodes(
                         el.childNodes(), ctx.copy(
                             unorderedListScope = UnorderedListScope(
@@ -445,7 +478,7 @@ class MatrixHtmlParser(
                 PreviousRenderedInfo(nextShouldTrimBlank = true, hasImplicitNewline = true)
             }
             "ol" -> {
-                withAnnotation(MatrixBodyAnnotations.ORDERED_LIST, ctx.indentedBlockDepth.toString()) {
+                withAnnotation(ctx, MatrixBodyAnnotations.ORDERED_LIST, ctx.indentedBlockDepth.toString()) { ctx ->
                     appendNodes(
                         el.childNodes(), ctx.copy(
                             orderedListScope = OrderedListScope(
@@ -488,7 +521,7 @@ class MatrixHtmlParser(
                     // li outside of a list, sounds like broken HTML, just render contents
                     appendNodes(el.childNodes(), ctx, resultMeta)
                 } else {
-                    withAnnotation(annotation, ctx.indentedBlockDepth.toString()) {
+                    withAnnotation(innerCtx, annotation, ctx.indentedBlockDepth.toString()) { innerCtx ->
                         append(bullet)
                         appendNodes(el.childNodes(), innerCtx, resultMeta)
                             ?: PreviousRenderedInfo(nextShouldTrimBlank = true)
@@ -542,12 +575,12 @@ class MatrixHtmlParser(
                         resultMeta.expandableItems.add(revealId)
                         var innerPrevRenderInfo: PreviousRenderedInfo? = previousRenderedInfo
                         if (preSummary.isNotEmpty()) {
-                            withAnnotation(MatrixBodyAnnotations.DETAILS_CONTENT, revealId.toString()) {
+                            withAnnotation(ctx, MatrixBodyAnnotations.DETAILS_CONTENT, revealId.toString()) { ctx ->
                                 innerPrevRenderInfo = appendNodes(preSummary, ctx, resultMeta, innerPrevRenderInfo)
                                 innerPrevRenderInfo ?: PreviousRenderedInfo()
                             }
                         }
-                        withAnnotation(MatrixBodyAnnotations.DETAILS_SUMMARY, revealId.toString()) {
+                        withAnnotation(ctx, MatrixBodyAnnotations.DETAILS_SUMMARY, revealId.toString()) { ctx ->
                             append(ctx.style.detailsSummaryIndicatorPlaceholder)
                             innerPrevRenderInfo = appendNodes(listOf(summary), ctx, resultMeta, innerPrevRenderInfo)
                             innerPrevRenderInfo ?: PreviousRenderedInfo()
@@ -555,7 +588,7 @@ class MatrixHtmlParser(
                         // Details summary is commonly handled via paragraph style, so trim blanks
                         innerPrevRenderInfo = PreviousRenderedInfo(nextShouldTrimBlank = true)
                         if (postSummary.isNotEmpty()) {
-                            withAnnotation(MatrixBodyAnnotations.DETAILS_CONTENT, revealId.toString()) {
+                            withAnnotation(ctx, MatrixBodyAnnotations.DETAILS_CONTENT, revealId.toString()) { ctx ->
                                 innerPrevRenderInfo = appendNodes(postSummary, ctx, resultMeta, innerPrevRenderInfo)
                                 innerPrevRenderInfo ?: PreviousRenderedInfo()
                             }
@@ -646,6 +679,21 @@ class MatrixHtmlParser(
             append("]")
         }
         append("\n")
+    }
+
+    /**
+     * Same as normal withAnnotation(), but with the annotation tracked in context.
+     */
+    private inline fun <R : Any> Builder.withAnnotation(
+        ctx: RenderContext,
+        tag: String,
+        annotation: String,
+        crossinline block: Builder.(RenderContext) -> R,
+    ): R = withAnnotation(
+        tag = tag,
+        annotation = annotation,
+    ) {
+        block(ctx.copy(currentAnnotationTags = ctx.currentAnnotationTags + tag))
     }
 }
 
