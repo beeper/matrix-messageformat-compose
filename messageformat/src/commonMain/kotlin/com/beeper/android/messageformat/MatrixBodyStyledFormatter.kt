@@ -397,12 +397,17 @@ open class DefaultMatrixBodyStyledFormatter(
         )
     }
 
+    open fun getCodeSpanStyle() = SpanStyle(
+        fontFamily = FontFamily.Monospace,
+        color = Color.White,
+    )
+
     override fun formatInlineCode(context: FormatContext): List<AnnotatedString.Annotation>? {
-        return listOf(SpanStyle(fontFamily = FontFamily.Monospace, color = Color.White))
+        return listOf(getCodeSpanStyle())
     }
 
     override fun formatCodeBlock(context: FormatContext): List<AnnotatedString.Annotation>? {
-        return listOf(SpanStyle(fontFamily = FontFamily.Monospace, color = Color.White))
+        return listOf(getCodeSpanStyle())
     }
 
     override fun formatBlockQuote(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>? {
