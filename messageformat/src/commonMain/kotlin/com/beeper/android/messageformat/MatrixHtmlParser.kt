@@ -244,9 +244,6 @@ class MatrixHtmlParser(
         val appendStart = length
         // Tab formatting
         val text = applyTabFormat(source, ctx)
-        if ("RenderContext" in text) {
-            log.e { "SC_DBG $source -> $text" }
-        }
         append(text)
         // Auto-linkification
         if (ctx.linkUrl == null && ctx.style.autoLinkUrlPattern != null) {
