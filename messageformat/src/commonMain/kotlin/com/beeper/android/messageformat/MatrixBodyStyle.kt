@@ -2,7 +2,6 @@ package com.beeper.android.messageformat
 
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -11,6 +10,12 @@ import androidx.compose.ui.text.AnnotatedString
 import java.util.regex.Pattern
 
 const val DEFAULT_UNORDERED_BULLET_STRING = "\u2022 "
+
+// We can "fake" tabs in monospace fonts by counting characters
+fun tabAsSpaces(tabIndexInLine: Int, tabWidth: Int = 8): String {
+    val missingSpace = tabWidth - (tabIndexInLine % tabWidth)
+    return " ".repeat(missingSpace)
+}
 
 /**
  * Styling that is independent of screen density, text size, and theme, and thus can be done as part of the first pre-processing step.
@@ -21,6 +26,15 @@ data class MatrixBodyPreFormatStyle(
     val formatUserMention: (userId: String, content: AnnotatedString) -> AnnotatedString = { _, content -> content },
     val formatRoomLink: (roomId: String, via: List<String>?, content: AnnotatedString) -> AnnotatedString = { _, _, content -> content },
     val formatMessageLink: (roomId: String, messageId: String, via: List<String>?, content: AnnotatedString) -> AnnotatedString = { _, _, _, content -> content },
+    val formatTab: ((currentAnnotations: List<String>, indexInLine: Int) -> AnnotatedString)? = { currentAnnotations, indexInLine ->
+        if (currentAnnotations.any { it == MatrixBodyAnnotations.BLOCK_CODE }) {
+            // We can "fake" tabs in monospace fonts by counting characters
+            AnnotatedString(tabAsSpaces(indexInLine))
+        } else {
+            // No good tabbing behavior in compose, just do a big whitespace
+            AnnotatedString("\u2003")
+        }
+    },
     val detailsSummaryIndicatorPlaceholder: String = "\u2007\u2007", // Non-breaking figure space for somewhat reliable placeholders, so drawBehind can draw the actual one based on state
     val formatInlineImageFallback: (InlineImageInfo) -> String = { it.title ?: it.alt ?: "IMG" },
     val autoLinkUrlPattern: Pattern? = DEFAULT_WEB_URL_PATTERN,
