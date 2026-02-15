@@ -11,6 +11,8 @@ object MatrixPatterns {
     val ROOM_ID_REGEX = Regex("""!.+""")
     val ROOM_ALIAS_REGEX = Regex("""#.*:.+""")
     val MESSAGE_ID_REGEX = Regex("""\$.+""")
+    // This one is more strict, as it used for auto-linkification.
+    val ROOM_ALIAS_LINKIFY_REGEX = Regex("""(?:(?<=\s)|(?<=[(\[{<])|^)(#[A-Za-z0-9._=\-/]+:[A-Za-z0-9.-]+(?::\d+)?)(?=$|\s|[)\]}>.,;!?])""")
 
     private fun String.isRoomIdOrAlias() =
         ROOM_ID_REGEX.matches(this) || ROOM_ALIAS_REGEX.matches(this)

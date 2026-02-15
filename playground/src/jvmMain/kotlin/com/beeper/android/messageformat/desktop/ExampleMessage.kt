@@ -48,6 +48,8 @@ dendri	380	365	-15	-3.95%
   <li>Step one</li>
   <li>Step two</li>
   <li>Step three</li>
+  <li>#2026-decentralised-communication:fosdem.org</li>
+  <li>notalink#2026-decentralised-communication:fosdem.org</li>
 </ol>
 
 <p>Now an unconventional ordered list:</p>
