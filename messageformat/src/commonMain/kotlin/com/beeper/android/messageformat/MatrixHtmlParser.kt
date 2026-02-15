@@ -11,6 +11,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withAnnotation
 import androidx.compose.ui.text.withStyle
 import co.touchlab.kermit.Logger
+import com.beeper.android.messageformat.MatrixPatterns.MATRIX_TO_LINK_PREFIX
 import com.googlecode.htmlcompressor.compressor.HtmlCompressor
 import kotlinx.collections.immutable.toPersistentMap
 import kotlinx.collections.immutable.toPersistentSet
@@ -249,6 +250,7 @@ class MatrixHtmlParser(
         // Tab formatting
         val text = applyTabFormat(source, ctx)
         append(text)
+        val linkedRanges = mutableListOf<Pair<Int, Int>>()
         // Auto-linkification
         if (ctx.linkUrl == null && ctx.style.autoLinkUrlPattern != null) {
             val matcher = ctx.style.autoLinkUrlPattern.matcher(text)
@@ -276,6 +278,33 @@ class MatrixHtmlParser(
                     appendStart + startInText,
                     appendStart + endInText,
                 )
+                linkedRanges += startInText to endInText
+            }
+        }
+        // Auto-linkify room aliases in plaintext, except in code/pre blocks
+        if (ctx.linkUrl == null && !ctx.preFormattedText && !ctx.inCodeBlock) {
+            MatrixPatterns.ROOM_ALIAS_LINKIFY_REGEX.findAll(text).forEach { match ->
+                val startInText = match.range.first
+                val endInText = match.range.last + 1
+                if (linkedRanges.any { (existingStart, existingEnd) ->
+                        startInText < existingEnd && endInText > existingStart
+                    }
+                ) {
+                    return@forEach
+                }
+                val roomLink: MatrixToLink =
+                    MatrixToLink.RoomLink(
+                        roomId = match.value,
+                        via = null,
+                        rawUrl = "$MATRIX_TO_LINK_PREFIX${match.value.replace("#", "%23")}",
+                    )
+                addStringAnnotation(
+                    MatrixBodyAnnotations.ROOM_LINK,
+                    Json.encodeToString(roomLink),
+                    appendStart + startInText,
+                    appendStart + endInText,
+                )
+                linkedRanges += startInText to endInText
             }
         }
         return text
