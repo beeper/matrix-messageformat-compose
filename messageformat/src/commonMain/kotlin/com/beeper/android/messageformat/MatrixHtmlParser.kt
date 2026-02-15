@@ -52,6 +52,10 @@ class MatrixHtmlParser(
     ) {
         val shouldIgnoreWhitespace: Boolean
             get() = !preFormattedText && (unorderedListScope != null || orderedListScope != null)
+        val inCodeBlock: Boolean
+            get() = currentAnnotationTags.any {
+                it == MatrixBodyAnnotations.BLOCK_CODE || it == MatrixBodyAnnotations.INLINE_CODE
+            }
     }
 
     private data class RenderResultMeta(
@@ -194,7 +198,7 @@ class MatrixHtmlParser(
         text: String,
         ctx: RenderContext,
     ) {
-        if (ctx.allowRoomMention) {
+        if (ctx.allowRoomMention && !ctx.preFormattedText && !ctx.inCodeBlock) {
             // Replace any occurrence of "@room" in the text with style.formatRoomMention()
             var currentIndex = 0
             var roomMentionIndex = text.indexOf(MENTION_ROOM)
@@ -254,7 +258,7 @@ class MatrixHtmlParser(
                 val url = text.substring(startInText, endInText)
                 // Handle matrix.to links specifically for user mentions and room / message links,
                 // if not in a preformatted text block
-                val matrixLink = if (ctx.preFormattedText) {
+                val matrixLink = if (ctx.preFormattedText || ctx.inCodeBlock) {
                     null
                 } else {
                     MatrixPatterns.parseMatrixToUrl(url)

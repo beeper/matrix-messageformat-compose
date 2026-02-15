@@ -2,7 +2,7 @@ package com.beeper.android.messageformat.desktop
 
 internal const val EXAMPLE_MESSAGE = """
 <h1>Matrix HTML Formatting Test</h1>
-<p>This message demonstrates <b>bold</b>, <strong>strong</strong>, <i>italic</i>, <em>emphasized</em>, <u>underlined</u>, <s>strikethrough</s> and <code>inline code</code> with some non-code text after.</p>
+<p>This message demonstrates <b>bold</b>, <strong>strong</strong>, <i>italic</i>, <em>emphasized</em>, <u>underlined</u>, <s>strikethrough</s> and <code>@room inline code</code> with some non-code text after.</p>
 
 <details><summary>Expandable tag here</summary>
 <h2>Very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header</h2>
@@ -15,6 +15,7 @@ internal const val EXAMPLE_MESSAGE = """
 with a newline
 and another one
 and some url that shouldn't render as mention: https://matrix.to/#/@spiritcroc:matrix.org
+same as @room pings
 
 Some numbers with tabs from TWIM:
 synapse	11679	11894	215	1.84%
