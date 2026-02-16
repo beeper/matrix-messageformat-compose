@@ -18,8 +18,8 @@ fun Modifier.linkLongPress(
     onLinkLongPress: (LinkAnnotation) -> Unit,
 ) = pointerInput(state.renderResult, onLinkLongPress, onOtherLongPress) {
     awaitEachGesture {
-        // Link annotations consume touches, but we need to get them anyway
-        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        // Link annotations consume touches, but we need to get them anyway, so we need the initial pass
+        val down = awaitFirstDown(pass = PointerEventPass.Initial)
         val link = state.renderResult.value?.textLayoutResult
             ?.getOffsetForPosition(down.position)?.let { position ->
                 state.text.getLinkAnnotations(position, position).firstOrNull()
@@ -29,25 +29,28 @@ fun Modifier.linkLongPress(
             return@awaitEachGesture
         }
         var lastPointerPosition = down.position
-        val wasReleasedBeforeLongPress = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+        val longPressCanceled = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
             while (true) {
-                val event = awaitPointerEvent(pass = PointerEventPass.Initial)
-                val change = event.changes.firstOrNull { it.id == down.id } ?: continue
-                lastPointerPosition = change.position
-                if (!change.pressed) {
-                    return@withTimeoutOrNull
+                val initialEvent = awaitPointerEvent(pass = PointerEventPass.Initial)
+                val initialChange = initialEvent.changes.firstOrNull { it.id == down.id } ?: continue
+                lastPointerPosition = initialChange.position
+                if (!initialChange.pressed) {
+                    return@withTimeoutOrNull true
+                }
+
+                // Let other recognizers arbitrate the gesture and cancel this long-press if they consume.
+                val finalEvent = awaitPointerEvent(pass = PointerEventPass.Final)
+                val finalChange = finalEvent.changes.firstOrNull { it.id == down.id } ?: continue
+                if (finalChange.isConsumed) {
+                    return@withTimeoutOrNull true
                 }
             }
-        } != null
-        if (!wasReleasedBeforeLongPress) {
+        } == true
+        if (!longPressCanceled) {
             // Check the touch input wasn't dragged out of the link - otherwise do generic longpress
-            if (lastPointerPosition != down.position) {
-                val linkCheck = state.renderResult.value?.textLayoutResult?.getOffsetForPosition(lastPointerPosition)
-                if (linkCheck == null || state.text.getLinkAnnotations(linkCheck, linkCheck).none { it == link }) {
-                    onOtherLongPress?.invoke()
-                } else {
-                    link?.item?.let(onLinkLongPress) ?: onOtherLongPress?.invoke()
-                }
+            val linkCheck = state.renderResult.value?.textLayoutResult?.getOffsetForPosition(lastPointerPosition)
+            if (linkCheck == null || state.text.getLinkAnnotations(linkCheck, linkCheck).none { it == link }) {
+                onOtherLongPress?.invoke()
             } else {
                 link?.item?.let(onLinkLongPress) ?: onOtherLongPress?.invoke()
             }
