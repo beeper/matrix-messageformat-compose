@@ -8,7 +8,6 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Dp
 import kotlin.math.ceil
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 /**
  * A custom layout that inputs a [TextLayoutResult] for its main content,
