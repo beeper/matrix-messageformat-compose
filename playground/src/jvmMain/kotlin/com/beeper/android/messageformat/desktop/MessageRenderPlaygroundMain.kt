@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -71,12 +72,17 @@ fun TextRenderScreen() {
     var wrapWidth by remember { mutableStateOf(false) }
     var forceWrapWidth by remember { mutableStateOf(false) }
     var inverseLayout by remember { mutableStateOf(false) }
+    var autoTextDirection by remember { mutableStateOf(true) }
     var rtlText by remember { mutableStateOf(false) }
     var withFooter by remember { mutableStateOf(false) }
+    var showStringAnnotations by remember { mutableStateOf(false) }
     val parser = remember(newlineDbg) { MatrixHtmlParser(newlineDbg = newlineDbg) }
     val renderTextStyle = MaterialTheme.typography.bodyLarge
     val baseDensity = LocalDensity.current
     val density = Density(baseDensity.density * renderScale, fontScale)
+    val stringAnnotations = remember(parseResult.text) {
+        parseResult.text.getStringAnnotations(0, parseResult.text.length)
+    }
     Row(
         Modifier.fillMaxSize().padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -111,6 +117,32 @@ fun TextRenderScreen() {
                     )
                 }
                 Text(
+                    text = "String annotations: ${stringAnnotations.size}",
+                    modifier = Modifier.clickable { showStringAnnotations = !showStringAnnotations },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (showStringAnnotations) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                            .heightIn(max = 180.dp)
+                            .border(1.dp, MaterialTheme.colorScheme.outline)
+                            .padding(8.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        if (stringAnnotations.isEmpty()) {
+                            Text("No string annotations")
+                        } else {
+                            stringAnnotations.forEachIndexed { index, annotation ->
+                                Text(
+                                    "$index: [${annotation.start}, ${annotation.end}) tag=${annotation.tag} item=${annotation.item}"
+                                )
+                            }
+                        }
+                    }
+                }
+                Text(
                     "Rendered:",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = renderTextStyle,
@@ -136,7 +168,9 @@ fun TextRenderScreen() {
                                 },
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyLarge.copy(
-                                    textDirection = if (rtlText) {
+                                    textDirection = if (autoTextDirection) {
+                                        TextDirection.Content
+                                    } else if (rtlText) {
                                         TextDirection.Rtl
                                     } else {
                                         TextDirection.Ltr
@@ -187,7 +221,8 @@ fun TextRenderScreen() {
                 ToggleRow("Wrap width", wrapWidth) { wrapWidth = it }
                 ToggleRow("Force layout wrap width", forceWrapWidth) { forceWrapWidth = it }
                 ToggleRow("Inverse layout", inverseLayout) { inverseLayout = it }
-                ToggleRow("RTL text", rtlText) { rtlText = it }
+                ToggleRow("Auto text direction", autoTextDirection) { autoTextDirection = it }
+                ToggleRow("RTL text", rtlText, enabled = !autoTextDirection) { rtlText = it }
                 ToggleRow("Footer", withFooter) { withFooter = it }
             }
             Text(
@@ -217,15 +252,20 @@ fun TextRenderScreen() {
 }
 
 @Composable
-private fun ToggleRow(text: String, checked: Boolean, onCheckChange: (Boolean) -> Unit) {
+private fun ToggleRow(
+    text: String,
+    checked: Boolean,
+    enabled: Boolean = true,
+    onCheckChange: (Boolean) -> Unit
+) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.clickable {
+        modifier = Modifier.clickable(enabled = enabled) {
             onCheckChange(!checked)
         }
     ) {
-        Switch(checked = checked, onCheckedChange = onCheckChange)
+        Switch(checked = checked, onCheckedChange = onCheckChange, enabled = enabled)
         Text(text)
     }
 }
