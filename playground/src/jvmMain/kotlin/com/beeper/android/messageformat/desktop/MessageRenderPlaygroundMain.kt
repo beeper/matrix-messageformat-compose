@@ -72,6 +72,7 @@ fun TextRenderScreen() {
     var wrapWidth by remember { mutableStateOf(false) }
     var forceWrapWidth by remember { mutableStateOf(false) }
     var inverseLayout by remember { mutableStateOf(false) }
+    var autoTextDirection by remember { mutableStateOf(true) }
     var rtlText by remember { mutableStateOf(false) }
     var withFooter by remember { mutableStateOf(false) }
     var showStringAnnotations by remember { mutableStateOf(false) }
@@ -167,7 +168,9 @@ fun TextRenderScreen() {
                                 },
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyLarge.copy(
-                                    textDirection = if (rtlText) {
+                                    textDirection = if (autoTextDirection) {
+                                        TextDirection.Content
+                                    } else if (rtlText) {
                                         TextDirection.Rtl
                                     } else {
                                         TextDirection.Ltr
@@ -218,7 +221,8 @@ fun TextRenderScreen() {
                 ToggleRow("Wrap width", wrapWidth) { wrapWidth = it }
                 ToggleRow("Force layout wrap width", forceWrapWidth) { forceWrapWidth = it }
                 ToggleRow("Inverse layout", inverseLayout) { inverseLayout = it }
-                ToggleRow("RTL text", rtlText) { rtlText = it }
+                ToggleRow("Auto text direction", autoTextDirection) { autoTextDirection = it }
+                ToggleRow("RTL text", rtlText, enabled = !autoTextDirection) { rtlText = it }
                 ToggleRow("Footer", withFooter) { withFooter = it }
             }
             Text(
@@ -248,15 +252,20 @@ fun TextRenderScreen() {
 }
 
 @Composable
-private fun ToggleRow(text: String, checked: Boolean, onCheckChange: (Boolean) -> Unit) {
+private fun ToggleRow(
+    text: String,
+    checked: Boolean,
+    enabled: Boolean = true,
+    onCheckChange: (Boolean) -> Unit
+) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.clickable {
+        modifier = Modifier.clickable(enabled = enabled) {
             onCheckChange(!checked)
         }
     ) {
-        Switch(checked = checked, onCheckedChange = onCheckChange)
+        Switch(checked = checked, onCheckedChange = onCheckChange, enabled = enabled)
         Text(text)
     }
 }
