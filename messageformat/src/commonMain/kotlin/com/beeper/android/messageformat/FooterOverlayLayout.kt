@@ -6,6 +6,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Dp
+import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -42,7 +43,7 @@ fun FooterOverlayLayout(
         val overlayPlaceable = overlayMeasurable?.measure(constraints)
 
         val lastLineWidth = if (textLayoutResult.lineCount > 0) {
-            textLayoutResult.getLineRight(textLayoutResult.lineCount-1).roundToInt()
+            ceil(textLayoutResult.getLineRight(textLayoutResult.lineCount-1)).toInt()
         } else {
             0
         }
@@ -53,7 +54,7 @@ fun FooterOverlayLayout(
 
         val textMaxWidth = if (forceWrapWidth && textLayoutResult.lineCount > 0) {
             (0..<textLayoutResult.lineCount).maxOf { line ->
-                textLayoutResult.getLineRight(line).roundToInt()
+                ceil(textLayoutResult.getLineRight(line)).toInt()
             }
         } else {
             textPlaceable.width
