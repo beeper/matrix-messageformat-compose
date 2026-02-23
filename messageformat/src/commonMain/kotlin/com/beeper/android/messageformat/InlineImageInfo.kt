@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.coerceIn
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,7 +46,7 @@ data class InlineImageInfo(
         placeholderVerticalAlign: PlaceholderVerticalAlign = PlaceholderVerticalAlign.TextCenter,
     ): Placeholder {
         return if (isEmote || (width == null && height == null)) {
-            Placeholder(defaultHeight, defaultHeight, PlaceholderVerticalAlign.TextCenter)
+            Placeholder(defaultHeight, defaultHeight, placeholderVerticalAlign)
         } else {
             Placeholder(
                 width = (width ?: height)?.coerceIn(minWidthSp, maxWidthSp)?.sp ?: defaultHeight,
@@ -71,18 +72,18 @@ fun Map<String, InlineImageInfo>.toInlineContent(
     placeholderVerticalAlign: PlaceholderVerticalAlign = PlaceholderVerticalAlign.TextCenter,
     drawContent: @Composable (InlineImageInfo, Modifier) -> Unit
 ) = mapValues { (_, info) ->
-    val rawSize = actualImageSizes[info.uri]
+    val rawSize = actualImageSizes[info.uri]?.takeIf { it.width > 0 && it.height > 0 }
     val placeholder = if (rawSize != null && !info.isEmote) {
         val ratio = rawSize.width.toFloat() / rawSize.height
         var renderWidth = (info.width ?: rawSize.width).dp.coerceIn(minWidth, maxWidth)
         var renderHeight = (info.height ?: rawSize.height).dp.coerceIn(minHeight, maxHeight)
         if (renderHeight.value < rawSize.height) {
-            renderWidth = renderHeight * ratio
+            renderWidth = (renderHeight * ratio).coerceAtMost(maxWidth)
         } else if (renderWidth.value < rawSize.width) {
-            renderHeight = renderWidth / ratio
+            renderHeight = (renderWidth / ratio).coerceAtMost(maxHeight)
         } else if (info.width != null && info.height != null) {
             // Still do sanity recalculation to correct possible wrong image ratios
-            renderWidth = renderHeight * ratio
+            renderWidth = (renderHeight * ratio).coerceAtMost(maxWidth)
         }
         Placeholder(
             width = density.run { renderWidth.toSp() },
