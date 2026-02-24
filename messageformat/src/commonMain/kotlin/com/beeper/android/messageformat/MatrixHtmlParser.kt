@@ -632,6 +632,9 @@ class MatrixHtmlParser(
                 }
             }
 
+            // Legacy reply fallback, ignore.
+            "mx-reply" -> previousRenderedInfo
+
             else -> {
                 // Unknown tags are ignored but children are parsed to keep text
                 appendNodes(el.childNodes(), ctx, resultMeta)
