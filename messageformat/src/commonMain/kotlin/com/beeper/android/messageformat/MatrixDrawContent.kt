@@ -159,7 +159,6 @@ fun Modifier.matrixBodyDrawWithContent(
         drawContent()
         return@drawWithContent
     }
-    drawFor(state.style.drawBehindBlockQuote, result.blockQuotes)
     drawFor(state.style.drawBehindBlockCode, result.blockCode)
     drawFor(state.style.drawBehindInlineCode, result.inlineCode)
     drawFor(state.style.drawBehindRoomMention, result.roomMentions)
@@ -168,6 +167,7 @@ fun Modifier.matrixBodyDrawWithContent(
     drawFor(state.style.drawBehindDetailsSummary, result.fullDetailsSummaries, interactionState)
     drawFor(state.style.drawBehindDetailsSummaryFirstLine, result.detailsSummariesFirstLines, interactionState)
     drawFor(state.style.drawBehindDetailsContent, result.detailsContents, interactionState)
+    drawFor(state.style.drawBehindBlockQuote, result.blockQuotes)
     drawFor(state.style.drawBehindHorizontalRule, result.horizontalRules)
     drawContent()
     drawFor(state.style.drawAboveSpan, result.spans, interactionState)
