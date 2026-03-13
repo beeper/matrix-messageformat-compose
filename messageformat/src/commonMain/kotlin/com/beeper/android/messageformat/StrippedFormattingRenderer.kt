@@ -20,6 +20,7 @@ open class MatrixBodyToPlaintextFormatter : MatrixBodyStyledFormatter() {
     override fun formatWebLink(href: String, context: FormatContext) = null
     override fun formatUnorderedListItem(depth: Int, context: FormatContext) = listOf(ParagraphStyle())
     override fun formatOrderedListItem(depth: Int, context: FormatContext) = listOf(ParagraphStyle())
+    override fun formatTable(depth: Int, context: FormatContext) = listOf(ParagraphStyle())
     override fun formatDetailsSummary(revealId: Int, context: FormatContext) = listOf(ParagraphStyle())
     override fun formatDetailsContent(revealId: Int, context: FormatContext) = listOf(ParagraphStyle())
 }
