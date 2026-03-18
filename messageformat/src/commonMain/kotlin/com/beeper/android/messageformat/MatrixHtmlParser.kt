@@ -252,20 +252,20 @@ class MatrixHtmlParser(
         append(text)
         val linkedRanges = mutableListOf<Pair<Int, Int>>()
         // Auto-linkification
-        if (ctx.linkUrl == null && ctx.style.autoLinkUrlPattern != null) {
+        if (ctx.linkUrl == null &&
+            ctx.style.autoLinkUrlPattern != null
+            && !ctx.preFormattedText
+            && !ctx.inCodeBlock
+        ) {
             val matcher = ctx.style.autoLinkUrlPattern.matcher(text)
             while (matcher.find()) {
                 val startInText = matcher.start()
                 val endInText = matcher.end()
                 val url = text.substring(startInText, endInText)
-                // Handle matrix.to links specifically for user mentions and room / message links,
-                // if not in a preformatted text block
-                val matrixLink = if (ctx.preFormattedText || ctx.inCodeBlock) {
-                    null
-                } else {
-                    MatrixPatterns.parseMatrixToUrl(url)
-                }
-                // Custom formatting of auto-linked url contents disabled for now - let's call it a feature, maybe it wasn't supposed to be a link?
+                // Handle matrix.to links specifically for user mentions and room / message links
+                val matrixLink = MatrixPatterns.parseMatrixToUrl(url)
+                // Custom formatting of auto-linked url contents disabled for now -
+                // let's call it a feature, maybe it wasn't supposed to be a link?
                 val tag = when (matrixLink) {
                     is MatrixToLink.UserMention -> MatrixBodyAnnotations.USER_MENTION
                     is MatrixToLink.RoomLink -> MatrixBodyAnnotations.ROOM_LINK
@@ -281,7 +281,7 @@ class MatrixHtmlParser(
                 linkedRanges += startInText to endInText
             }
         }
-        // Auto-linkify room aliases in plaintext, except in code/pre blocks
+        // Auto-linkify room aliases in plaintext as well (except in code/pre blocks)
         if (ctx.linkUrl == null && !ctx.preFormattedText && !ctx.inCodeBlock) {
             MatrixPatterns.ROOM_ALIAS_LINKIFY_REGEX.findAll(text).forEach { match ->
                 val startInText = match.range.first
