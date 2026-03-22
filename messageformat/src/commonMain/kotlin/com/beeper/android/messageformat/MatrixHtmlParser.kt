@@ -580,8 +580,12 @@ class MatrixHtmlParser(
                         title = title,
                         alt = alt,
                     )
+                    val start = length
+                    // Actual inline content
                     appendInlineContent(id, ctx.style.formatInlineImageFallback(inlineImageInfo))
                     resultMeta.inlineImages[id] = inlineImageInfo
+                    // Allow easy lookup of all inline content via string annotations
+                    addStringAnnotation(MatrixBodyAnnotations.INLINE_IMAGE, id, start, length)
                 }
                 PreviousRenderedInfo()
             }
