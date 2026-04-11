@@ -73,7 +73,18 @@ fun Map<String, InlineImageInfo>.toInlineContent(
     drawContent: @Composable (InlineImageInfo, Modifier) -> Unit
 ) = mapValues { (_, info) ->
     val rawSize = actualImageSizes[info.uri]?.takeIf { it.width > 0 && it.height > 0 }
-    val placeholder = if (rawSize != null && !info.isEmote) {
+    val emoteRenderSize = rawSize?.takeIf { info.isEmote }?.let {
+        val renderHeight = density.run { defaultHeight.toDp() }.coerceIn(minHeight, maxHeight)
+        val renderWidth = (renderHeight * it.width.toFloat() / it.height).coerceIn(minWidth, maxWidth)
+        renderWidth to renderHeight
+    }
+    val placeholder = if (emoteRenderSize != null) {
+        Placeholder(
+            width = density.run { emoteRenderSize.first.toSp() },
+            height = density.run { emoteRenderSize.second.toSp() },
+            placeholderVerticalAlign = placeholderVerticalAlign,
+        )
+    } else if (rawSize != null && !info.isEmote) {
         val ratio = rawSize.width.toFloat() / rawSize.height
         var renderWidth = (info.width ?: rawSize.width).dp.coerceIn(minWidth, maxWidth)
         var renderHeight = (info.height ?: rawSize.height).dp.coerceIn(minHeight, maxHeight)
@@ -102,6 +113,7 @@ fun Map<String, InlineImageInfo>.toInlineContent(
     }
     InlineTextContent(placeholder) {
         val modifier = when {
+            emoteRenderSize != null -> Modifier.size(emoteRenderSize.first, emoteRenderSize.second)
             info.isEmote -> Modifier.height(density.run { defaultHeight.toDp() })
             info.width != null && info.height != null -> Modifier.size(
                 info.width.spAsDp(density).coerceIn(minWidth, maxWidth),
