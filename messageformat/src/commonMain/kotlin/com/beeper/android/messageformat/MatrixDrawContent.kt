@@ -36,7 +36,30 @@ sealed interface DrawPosition {
         override val end: Int,
         val line: Int,
         override val textDirection: ResolvedTextDirection,
-    ) : DrawPosition
+        val lineIndexInAnnotation: Int,
+        val totalLinesInAnnotation: Int,
+        val indexInLine: Int,
+        val totalInLine: Int,
+    ) : DrawPosition {
+        /** Whether this is the first line for the given span */
+        val isFirstLine: Boolean
+            get() = lineIndexInAnnotation == 0
+        /** Whether this is the last line for the given span */
+        val isLastLine: Boolean
+            get() = lineIndexInAnnotation == totalLinesInAnnotation - 1
+        /** Whether the left side is a line wrap from the previous or to the next line. */
+        val leftHasContinuation: Boolean
+            get() = when (textDirection) {
+                ResolvedTextDirection.Ltr -> !isFirstLine
+                ResolvedTextDirection.Rtl -> !isLastLine
+            }
+        /** Whether the right side is a line wrap from the previous or to the next line. */
+        val rightHasContinuation: Boolean
+            get() = when (textDirection) {
+                ResolvedTextDirection.Ltr -> !isLastLine
+                ResolvedTextDirection.Rtl -> !isFirstLine
+            }
+    }
 }
 
 /**
@@ -253,7 +276,7 @@ fun TextLayoutResult.perLineBoundingBoxesForRange(start: Int, end: Int): List<Dr
                         currentList.clear()
                     }
                 }
-                partitionedBoundingBoxes.map { (direction, boxes) ->
+                partitionedBoundingBoxes.mapIndexed { index, (direction, boxes) ->
                     val isRtl = direction == ResolvedTextDirection.Rtl
                     DrawPosition.InLine(
                         Rect(
@@ -275,6 +298,10 @@ fun TextLayoutResult.perLineBoundingBoxesForRange(start: Int, end: Int): List<Dr
                         end = endInLine,
                         line = line,
                         textDirection = direction,
+                        lineIndexInAnnotation = line - firstLine,
+                        totalLinesInAnnotation = lastLine - firstLine + 1,
+                        indexInLine = index,
+                        totalInLine = partitionedBoundingBoxes.size,
                     )
                 }
             } catch (_: IllegalArgumentException) {

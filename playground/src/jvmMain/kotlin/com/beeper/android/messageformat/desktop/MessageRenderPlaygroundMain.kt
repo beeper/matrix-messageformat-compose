@@ -32,7 +32,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextLayoutResult
@@ -44,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import com.beeper.android.messageformat.FooterOverlayLayout
+import com.beeper.android.messageformat.MatrixBodyDrawStyle
 import com.beeper.android.messageformat.MatrixBodyParseResult
 import com.beeper.android.messageformat.MatrixHtmlParser
 import com.beeper.android.messageformat.MatrixBodyPreFormatStyle
@@ -177,6 +183,37 @@ fun TextRenderScreen() {
                                     }
                                 ),
                                 onTextLayout = { textLayoutResult = it },
+                                drawStyle = remember {
+                                    MatrixBodyDrawStyle(
+                                        drawBehindUserMention = { _, pos ->
+                                            val rect = pos.rect
+                                            val leftRadius = this.density * if (pos.leftHasContinuation) {
+                                                2f
+                                            } else {
+                                                8f
+                                            }
+                                            val rightRadius = this.density * if (pos.rightHasContinuation) {
+                                                2f
+                                            } else {
+                                                8f
+                                            }
+                                            drawIntoCanvas {
+                                                val path = Path().apply {
+                                                    addRoundRect(
+                                                        RoundRect(
+                                                            rect = rect,
+                                                            topLeft = CornerRadius(leftRadius, leftRadius),
+                                                            bottomLeft = CornerRadius(leftRadius, leftRadius),
+                                                            topRight = CornerRadius(rightRadius, rightRadius),
+                                                            bottomRight = CornerRadius(rightRadius, rightRadius),
+                                                        ),
+                                                    )
+                                                }
+                                                drawPath(path, color = Color.Blue)
+                                            }
+                                        }
+                                    )
+                                }
                             )
                         },
                         overlay = {
