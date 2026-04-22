@@ -226,7 +226,7 @@ private fun <T, U, S>DrawScope.drawFor(function: (DrawScope.(T, U, S) -> Unit)?,
 fun TextLayoutResult.perLineBoundingBoxesForRange(start: Int, end: Int): List<DrawPosition.InLine> {
     return try {
         val firstLine = getLineForOffset(start)
-        val lastLine = getLineForOffset(end)
+        val lastLine = lastNonEmptyLineForRange(firstLine, end)
         (firstLine..lastLine).flatMap { line ->
             try {
                 val currentLineStart = getLineStart(line)
@@ -319,10 +319,7 @@ fun TextLayoutResult.perLineBoundingBoxesForRange(start: Int, end: Int): List<Dr
 fun TextLayoutResult.blockBoundingBox(start: Int, end: Int): DrawPosition.Block? {
     return try {
         val firstLine = getLineForOffset(start)
-        var lastLine = getLineForOffset(end)
-        if (lastLine > firstLine && getLineStart(lastLine) == end) {
-            lastLine--
-        }
+        val lastLine = lastNonEmptyLineForRange(firstLine, end)
         DrawPosition.Block(
             Rect(
                 top = getLineTop(firstLine),
@@ -336,5 +333,14 @@ fun TextLayoutResult.blockBoundingBox(start: Int, end: Int): DrawPosition.Block?
         )
     } catch (_: IllegalArgumentException) {
         null
+    }
+}
+
+private fun TextLayoutResult.lastNonEmptyLineForRange(firstLine: Int, end: Int): Int {
+    val lastLine = getLineForOffset(end)
+    return if (lastLine > firstLine && getLineStart(lastLine) == end) {
+        lastLine - 1
+    } else {
+        lastLine
     }
 }
