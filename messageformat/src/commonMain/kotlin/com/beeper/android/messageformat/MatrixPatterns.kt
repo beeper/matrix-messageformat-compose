@@ -54,5 +54,5 @@ object MatrixPatterns {
         return null
     }
 
-    fun isValidMatrixUri(url: String) = url.startsWith("mxc://") || url.startsWith("localmxc://")
+    fun isValidMatrixUri(url: String) = url.startsWith("mxc://")
 }

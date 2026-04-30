@@ -38,6 +38,7 @@ data class MatrixBodyPreFormatStyle(
     val detailsSummaryIndicatorPlaceholder: String = "\u2007\u2007", // Non-breaking figure space for somewhat reliable placeholders, so drawBehind can draw the actual one based on state
     val formatInlineImageFallback: (InlineImageInfo) -> String = { it.title ?: it.alt ?: "IMG" },
     val autoLinkUrlPattern: Pattern? = DEFAULT_WEB_URL_PATTERN,
+    val isValidInlineImageUri: (String) -> Boolean = MatrixPatterns::isValidMatrixUri,
 )
 
 /**
