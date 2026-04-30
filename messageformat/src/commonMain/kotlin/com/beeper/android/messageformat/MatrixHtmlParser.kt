@@ -564,7 +564,7 @@ class MatrixHtmlParser(
 
             // Inline images
             "img" -> {
-                val uri = el.attr("src").takeIf(MatrixPatterns::isValidMatrixUri)
+                val uri = el.attr("src").takeIf(ctx.style.isValidInlineImageUri)
                 if (uri == null) {
                     // Not a valid inline image
                     appendNodes(el.childNodes(), ctx, resultMeta)
