@@ -38,6 +38,7 @@ abstract class MatrixBodyStyledFormatter {
     abstract fun formatRoomLink(roomLink: MatrixToLink.RoomLink, context: FormatContext): List<AnnotatedString.Annotation>?
     abstract fun formatMessageLink(messageLink: MatrixToLink.MessageLink, context: FormatContext): List<AnnotatedString.Annotation>?
     abstract fun formatWebLink(href: String, context: FormatContext): List<AnnotatedString.Annotation>?
+    open fun formatMailAddress(address: String, context: FormatContext): List<AnnotatedString.Annotation>? = formatWebLink("mailto:$address", context)
     abstract fun formatUnorderedListItem(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>?
     abstract fun formatOrderedListItem(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>?
     abstract fun formatDetailsSummary(revealId: Int, context: FormatContext): List<AnnotatedString.Annotation>?
@@ -96,6 +97,7 @@ abstract class MatrixBodyStyledFormatter {
                     }
                 }
                 MatrixBodyAnnotations.WEB_LINK -> formatWebLink(annotation.value, context)
+                MatrixBodyAnnotations.MAIL_ADDRESS -> formatMailAddress(annotation.value, context)
                 MatrixBodyAnnotations.BLOCK_QUOTE -> {
                     val depth = annotation.value.toIntOrNull()
                     if (depth == null) {

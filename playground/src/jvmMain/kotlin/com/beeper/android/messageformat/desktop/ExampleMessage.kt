@@ -29,6 +29,8 @@ dendri	380	365	-15	-3.95%
 <p>
 @room hey <a href="https://matrix.to/#/@spiritcroc:matrix.org">Mention</a>, check out this <a href='https://matrix.org'>link</a>
 <br>
+Auto-linked email address: test@example.com
+<br>
 <a href="https://matrix.to/#/@spiritcroc:beeper.com">Very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention</a>
 </p>
 
