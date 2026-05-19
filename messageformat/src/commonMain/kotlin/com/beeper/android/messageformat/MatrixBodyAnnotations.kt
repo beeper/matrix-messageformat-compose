@@ -13,6 +13,7 @@ object MatrixBodyAnnotations {
     const val ROOM_LINK = "mx:ROOM_LINK"
     const val MESSAGE_LINK = "mx:MESSAGE_LINK"
     const val WEB_LINK = "mx:WEB_LINK"
+    const val MAIL_ADDRESS = "mx:MAIL_ADDRESS"
     const val BLOCK_QUOTE = "mx:BLOCK_QUOTE"
     const val UNORDERED_LIST = "mx:UNORDERED_LIST"
     const val UNORDERED_LIST_ITEM = "mx:UNORDERED_LIST_ITEM"
