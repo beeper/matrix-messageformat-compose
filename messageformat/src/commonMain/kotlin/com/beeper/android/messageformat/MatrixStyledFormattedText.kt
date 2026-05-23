@@ -52,6 +52,7 @@ fun MatrixStyledFormattedText(
     onClick: (() -> Unit)? = null,
     onLongPress: (() -> Unit)? = null,
 ) {
+    val uriHandler = LocalUriHandler.current
     val styledText = remember(formatter, parseResult, interactionState) {
         formatter.applyStyle(parseResult, interactionState)
     }
@@ -65,6 +66,13 @@ fun MatrixStyledFormattedText(
             if (onLinkLongPress != null) {
                 Modifier.linkLongPress(
                     state = renderState,
+                    onLinkClick = { link ->
+                        link.linkInteractionListener?.onClick(link) ?: if (link is LinkAnnotation.Url) {
+                            uriHandler.openUri(link.url)
+                        } else {
+                            Unit
+                        }
+                    },
                     onLinkLongPress = onLinkLongPress,
                     onOtherLongPress = onLongPress,
                 ).then(
