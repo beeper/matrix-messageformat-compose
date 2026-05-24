@@ -424,9 +424,7 @@ open class DefaultMatrixBodyStyledFormatter(
 
     override fun formatUserMention(mention: MatrixToLink.UserMention, context: FormatContext): List<AnnotatedString.Annotation>? {
         return if (mention.isAutoLink) {
-            listOf(
-                LinkAnnotation.Url(mention.rawUrl, urlStyle)
-            )
+            formatWebLink(mention.rawUrl, context)
         } else {
             listOf(
                 SpanStyle(color = Color.White, fontWeight = FontWeight.Bold)
