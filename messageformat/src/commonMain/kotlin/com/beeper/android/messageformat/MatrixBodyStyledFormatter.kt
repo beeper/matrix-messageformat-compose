@@ -423,9 +423,15 @@ open class DefaultMatrixBodyStyledFormatter(
     }
 
     override fun formatUserMention(mention: MatrixToLink.UserMention, context: FormatContext): List<AnnotatedString.Annotation>? {
-        return listOf(
-            SpanStyle(color = Color.White, fontWeight = FontWeight.Bold)
-        )
+        return if (mention.isAutoLink) {
+            listOf(
+                LinkAnnotation.Url(mention.rawUrl, urlStyle)
+            )
+        } else {
+            listOf(
+                SpanStyle(color = Color.White, fontWeight = FontWeight.Bold)
+            )
+        }
     }
 
     override fun formatRoomLink(roomLink: MatrixToLink.RoomLink, context: FormatContext): List<AnnotatedString.Annotation>? {

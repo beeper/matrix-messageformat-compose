@@ -17,7 +17,7 @@ object MatrixPatterns {
     private fun String.isRoomIdOrAlias() =
         ROOM_ID_REGEX.matches(this) || ROOM_ALIAS_REGEX.matches(this)
 
-    fun parseMatrixToUrl(url: String): MatrixToLink? {
+    fun parseMatrixToUrl(url: String, isAutoLink: Boolean): MatrixToLink? {
         if (!url.startsWith(MATRIX_TO_LINK_PREFIX)) {
             return null
         }
@@ -37,7 +37,7 @@ object MatrixPatterns {
             1 -> {
                 val segment = segments.first()
                 if (USER_ID_REGEX.matches(segment)) {
-                    return MatrixToLink.UserMention(segment, url)
+                    return MatrixToLink.UserMention(segment, url, isAutoLink)
                 }
                 if (segment.isRoomIdOrAlias()) {
                     val via = parsed.parameters.getAll("via")

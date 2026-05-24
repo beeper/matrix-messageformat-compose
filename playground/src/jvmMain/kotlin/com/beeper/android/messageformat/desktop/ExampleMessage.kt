@@ -31,6 +31,8 @@ dendri	380	365	-15	-3.95%
 <br>
 Auto-linked email address: test@example.com
 <br>
+Auto-linkified user link: https://matrix.to/#/@spiritcroc:matrix.org
+<br>
 <a href="https://matrix.to/#/@spiritcroc:beeper.com">Very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention</a>
 </p>
 
