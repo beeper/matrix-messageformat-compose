@@ -291,7 +291,7 @@ class MatrixHtmlParser(
                     }
                     val url = text.substring(startInText, endInText)
                     // Handle matrix.to links specifically for user mentions and room / message links
-                    val matrixLink = MatrixPatterns.parseMatrixToUrl(url)
+                    val matrixLink = MatrixPatterns.parseMatrixToUrl(url, isAutoLink = true)
                     // Custom formatting of auto-linked url contents disabled for now -
                     // let's call it a feature, maybe it wasn't supposed to be a link?
                     val tag = when (matrixLink) {
@@ -479,7 +479,7 @@ class MatrixHtmlParser(
             "a" -> {
                 val href = el.attr("href")
                 // Handle matrix.to links specifically for user mentions and room / message links
-                val matrixLink = MatrixPatterns.parseMatrixToUrl(href)
+                val matrixLink = MatrixPatterns.parseMatrixToUrl(href, isAutoLink = false)
                 if (matrixLink == null) {
                     withAnnotation(ctx, MatrixBodyAnnotations.WEB_LINK, href) { ctx ->
                         appendNodes(
