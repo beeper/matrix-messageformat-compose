@@ -46,9 +46,9 @@ data class SpanAttributes(
 sealed interface MatrixToLink {
     val rawUrl: String
     @Serializable
-    data class UserMention(val userId: String, override val rawUrl: String, val isAutoLink: Boolean) : MatrixToLink
+    data class UserMention(val userId: String, override val rawUrl: String, val isAutoLink: Boolean, val action: String? = null) : MatrixToLink
     @Serializable
-    data class RoomLink(val roomId: String, val via: List<String>?, override val rawUrl: String) : MatrixToLink
+    data class RoomLink(val roomId: String, val via: List<String>?, override val rawUrl: String, val action: String? = null) : MatrixToLink
     @Serializable
-    data class MessageLink(val roomId: String, val messageId: String, val via: List<String>?, override val rawUrl: String) : MatrixToLink
+    data class MessageLink(val roomId: String, val messageId: String, val via: List<String>?, override val rawUrl: String, val action: String? = null) : MatrixToLink
 }
