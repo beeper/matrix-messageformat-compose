@@ -1,6 +1,7 @@
 package com.beeper.android.messageformat.desktop
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Slider
 import androidx.compose.material.Switch
@@ -33,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -54,6 +55,7 @@ import com.beeper.android.messageformat.MatrixBodyParseResult
 import com.beeper.android.messageformat.MatrixHtmlParser
 import com.beeper.android.messageformat.MatrixBodyPreFormatStyle
 import com.beeper.android.messageformat.MatrixStyledFormattedText
+import com.beeper.android.messageformat.StrippedFormattingRenderer
 import com.beeper.android.messageformat.toInlineContent
 
 fun main() = application {
@@ -73,6 +75,7 @@ fun TextRenderScreen() {
     var textInput by remember { mutableStateOf(EXAMPLE_MESSAGE) }
     var footerText by remember { mutableStateOf("⏲") }
     var parseResult by remember { mutableStateOf(MatrixBodyParseResult("")) }
+    var strippedParseResult by remember { mutableStateOf(MatrixBodyParseResult("")) }
     var allowRoomMention by remember { mutableStateOf(true) }
     var newlineDbg by remember { mutableStateOf(false) }
     var wrapWidth by remember { mutableStateOf(false) }
@@ -115,10 +118,22 @@ fun TextRenderScreen() {
                         formatInlineImageFallback = { "\uFFFD" },
                     )
                 }
+                val strippedPreFormatStyle = remember {
+                    MatrixBodyPreFormatStyle(
+                        detailsSummaryIndicatorPlaceholder = "",
+                    )
+                }
                 LaunchedEffect(parser, textInput, preFormatStyle, allowRoomMention) {
                     parseResult = parser.parseHtml(
                         textInput,
                         preFormatStyle,
+                        allowRoomMention = allowRoomMention,
+                    )
+                }
+                LaunchedEffect(parser, textInput, strippedPreFormatStyle, allowRoomMention) {
+                    strippedParseResult = parser.parseHtml(
+                        textInput,
+                        strippedPreFormatStyle,
                         allowRoomMention = allowRoomMention,
                     )
                 }
@@ -153,7 +168,7 @@ fun TextRenderScreen() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = renderTextStyle,
                 )
-                Box(
+                Column(
                     modifier = Modifier.fillMaxSize()
                         .weight(1f)
                         .verticalScroll(rememberScrollState()),
@@ -162,62 +177,81 @@ fun TextRenderScreen() {
                     FooterOverlayLayoutWrapper(
                         textLayoutResult = textLayoutResult,
                         content = {
-                            MatrixStyledFormattedText(
-                                parseResult = parseResult,
-                                inlineContent = parseResult.inlineImages.toInlineContent(density, renderTextStyle.fontSize) { info, modifier ->
-                                    // Playground doesn't have a Matrix client for fetching images, just do a placeholder icon
-                                    Image(
-                                        Icons.Default.Image,
-                                        info.alt ?: info.title,
-                                        modifier,
-                                    )
-                                },
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    textDirection = if (autoTextDirection) {
-                                        TextDirection.Content
-                                    } else if (rtlText) {
-                                        TextDirection.Rtl
-                                    } else {
-                                        TextDirection.Ltr
-                                    }
-                                ),
-                                onTextLayout = { textLayoutResult = it },
-                                drawStyle = remember {
-                                    MatrixBodyDrawStyle(
-                                        drawBehindUserMention = { mention, pos ->
-                                            if (mention.isAutoLink) {
-                                                return@MatrixBodyDrawStyle
-                                            }
-                                            val rect = pos.rect
-                                            val leftRadius = this.density * if (pos.leftHasContinuation) {
-                                                2f
-                                            } else {
-                                                8f
-                                            }
-                                            val rightRadius = this.density * if (pos.rightHasContinuation) {
-                                                2f
-                                            } else {
-                                                8f
-                                            }
-                                            drawIntoCanvas {
-                                                val path = Path().apply {
-                                                    addRoundRect(
-                                                        RoundRect(
-                                                            rect = rect,
-                                                            topLeft = CornerRadius(leftRadius, leftRadius),
-                                                            bottomLeft = CornerRadius(leftRadius, leftRadius),
-                                                            topRight = CornerRadius(rightRadius, rightRadius),
-                                                            bottomRight = CornerRadius(rightRadius, rightRadius),
-                                                        ),
-                                                    )
-                                                }
-                                                drawPath(path, color = Color.Blue)
-                                            }
+                            SelectionContainer {
+                                MatrixStyledFormattedText(
+                                    parseResult = parseResult,
+                                    inlineContent = parseResult.inlineImages.toInlineContent(
+                                        density,
+                                        renderTextStyle.fontSize
+                                    ) { info, modifier ->
+                                        // Playground doesn't have a Matrix client for fetching images, just do a placeholder icon
+                                        Image(
+                                            Icons.Default.Image,
+                                            info.alt ?: info.title,
+                                            modifier,
+                                        )
+                                    },
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        textDirection = if (autoTextDirection) {
+                                            TextDirection.Content
+                                        } else if (rtlText) {
+                                            TextDirection.Rtl
+                                        } else {
+                                            TextDirection.Ltr
                                         }
-                                    )
-                                }
-                            )
+                                    ),
+                                    onTextLayout = { textLayoutResult = it },
+                                    drawStyle = remember {
+                                        MatrixBodyDrawStyle(
+                                            drawBehindUserMention = { mention, pos ->
+                                                if (mention.isAutoLink) {
+                                                    return@MatrixBodyDrawStyle
+                                                }
+                                                val rect = pos.rect
+                                                val leftRadius =
+                                                    this.density * if (pos.leftHasContinuation) {
+                                                        2f
+                                                    } else {
+                                                        8f
+                                                    }
+                                                val rightRadius =
+                                                    this.density * if (pos.rightHasContinuation) {
+                                                        2f
+                                                    } else {
+                                                        8f
+                                                    }
+                                                drawIntoCanvas {
+                                                    val path = Path().apply {
+                                                        addRoundRect(
+                                                            RoundRect(
+                                                                rect = rect,
+                                                                topLeft = CornerRadius(
+                                                                    leftRadius,
+                                                                    leftRadius
+                                                                ),
+                                                                bottomLeft = CornerRadius(
+                                                                    leftRadius,
+                                                                    leftRadius
+                                                                ),
+                                                                topRight = CornerRadius(
+                                                                    rightRadius,
+                                                                    rightRadius
+                                                                ),
+                                                                bottomRight = CornerRadius(
+                                                                    rightRadius,
+                                                                    rightRadius
+                                                                ),
+                                                            ),
+                                                        )
+                                                    }
+                                                    drawPath(path, color = Color.Blue)
+                                                }
+                                            }
+                                        )
+                                    }
+                                )
+                            }
                         },
                         overlay = {
                             if (withFooter) {
@@ -231,6 +265,23 @@ fun TextRenderScreen() {
                             Modifier.fillMaxWidth()
                         },
                     )
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant),
+                    ) {
+                        Text(
+                            "Rendered with stripped formatting:",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = renderTextStyle,
+                        )
+                        SelectionContainer {
+                            Text(
+                                StrippedFormattingRenderer.formattedContentToPlainString(strippedParseResult),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = renderTextStyle,
+                            )
+                        }
+                    }
                 }
             }
         }
