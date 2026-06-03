@@ -280,6 +280,31 @@ class MatrixHtmlParser(
                 }
             }
 
+            // Auto-linkification of matrix: URIs, which are not covered by generic web URL patterns.
+            val matrixUriMatcher = MatrixPatterns.MATRIX_URI_PATTERN.matcher(text)
+            while (matrixUriMatcher.find()) {
+                val startInText = matrixUriMatcher.start()
+                val matchedUrl = matrixUriMatcher.group()
+                val url = matchedUrl.trimEnd('.', ',', ';', '!', '?', ')', ']', '}', '>')
+                val endInText = startInText + url.length
+                if (url.isEmpty() || overlapsExistingLink(startInText, endInText)) {
+                    continue
+                }
+                val matrixLink = MatrixPatterns.parseMatrixLink(url, isAutoLink = true) ?: continue
+                val tag = when (matrixLink) {
+                    is MatrixToLink.UserMention -> MatrixBodyAnnotations.USER_MENTION
+                    is MatrixToLink.RoomLink -> MatrixBodyAnnotations.ROOM_LINK
+                    is MatrixToLink.MessageLink -> MatrixBodyAnnotations.MESSAGE_LINK
+                }
+                addStringAnnotation(
+                    tag,
+                    Json.encodeToString(matrixLink),
+                    appendStart + startInText,
+                    appendStart + endInText,
+                )
+                linkedRanges += startInText to endInText
+            }
+
             // Auto-linkification of hyperlinks
             if (ctx.style.autoLinkUrlPattern != null) {
                 val matcher = ctx.style.autoLinkUrlPattern.matcher(text)
@@ -291,7 +316,7 @@ class MatrixHtmlParser(
                     }
                     val url = text.substring(startInText, endInText)
                     // Handle matrix.to links specifically for user mentions and room / message links
-                    val matrixLink = MatrixPatterns.parseMatrixToUrl(url)
+                    val matrixLink = MatrixPatterns.parseMatrixLink(url, isAutoLink = true)
                     // Custom formatting of auto-linked url contents disabled for now -
                     // let's call it a feature, maybe it wasn't supposed to be a link?
                     val tag = when (matrixLink) {
@@ -479,7 +504,7 @@ class MatrixHtmlParser(
             "a" -> {
                 val href = el.attr("href")
                 // Handle matrix.to links specifically for user mentions and room / message links
-                val matrixLink = MatrixPatterns.parseMatrixToUrl(href)
+                val matrixLink = MatrixPatterns.parseMatrixLink(href, isAutoLink = false)
                 if (matrixLink == null) {
                     withAnnotation(ctx, MatrixBodyAnnotations.WEB_LINK, href) { ctx ->
                         appendNodes(

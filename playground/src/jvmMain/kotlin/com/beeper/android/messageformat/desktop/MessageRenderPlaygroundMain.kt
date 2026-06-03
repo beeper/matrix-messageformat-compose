@@ -204,7 +204,10 @@ fun TextRenderScreen() {
                                     onTextLayout = { textLayoutResult = it },
                                     drawStyle = remember {
                                         MatrixBodyDrawStyle(
-                                            drawBehindUserMention = { _, pos ->
+                                            drawBehindUserMention = { mention, pos ->
+                                                if (mention.isAutoLink) {
+                                                    return@MatrixBodyDrawStyle
+                                                }
                                                 val rect = pos.rect
                                                 val leftRadius =
                                                     this.density * if (pos.leftHasContinuation) {
