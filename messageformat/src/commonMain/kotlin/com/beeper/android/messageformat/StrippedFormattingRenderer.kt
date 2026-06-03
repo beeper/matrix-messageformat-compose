@@ -116,7 +116,7 @@ object StrippedFormattingRenderer {
     ) { content, id ->
         val info = inlineImages[id]
         if (info == null) {
-            Logger.withTag("replaceInlineImages").w("Unknown URI")
+            Logger.withTag("replaceInlineImages").w("Unknown URI: $id")
             return@replaceAnnotationContent content
         }
         AnnotatedString(inlineImageReplacement(info))
