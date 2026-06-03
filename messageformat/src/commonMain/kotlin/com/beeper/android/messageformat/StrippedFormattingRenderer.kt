@@ -33,10 +33,8 @@ object StrippedFormattingRenderer {
         parseResult: MatrixBodyParseResult,
         formatter: MatrixBodyStyledFormatter = MatrixBodyToPlaintextFormatter(),
         stripNewlines: Boolean = true,
-        spoilerReplacement: (AnnotatedString) -> String = { "█".repeat(it.length) },
-        inlineImageReplacement: (InlineImageInfo) -> String = { info ->
-            info.alt ?: info.title ?: if (info.isEmote) "[emote]" else "[IMG]"
-        }
+        spoilerReplacement: (AnnotatedString) -> String = ::defaultSpoilerReplacement,
+        inlineImageReplacement: (InlineImageInfo) -> String = ::defaultInlineImageReplacement,
     ): String {
         return stripFormattingKeepingAnnotations(
             parseResult,
@@ -61,13 +59,17 @@ object StrippedFormattingRenderer {
             }
     }
 
+    private fun defaultInlineImageReplacement(info: InlineImageInfo): String =
+        info.alt ?: info.title ?: if (info.isEmote) "[emote]" else "[IMG]"
+
+    private fun defaultSpoilerReplacement(spoiler: AnnotatedString): String =
+        "█".repeat(spoiler.length)
+
     fun stripFormattingKeepingAnnotations(
         parseResult: MatrixBodyParseResult,
         formatter: MatrixBodyStyledFormatter = MatrixBodyToPlaintextFormatter(),
-        spoilerReplacement: (AnnotatedString) -> String = { "█".repeat(it.length.coerceIn(0, 12)) },
-        inlineImageReplacement: ((InlineImageInfo) -> String)? = { info ->
-            info.alt ?: info.title ?: if (info.isEmote) "[emote]" else "[IMG]"
-        }
+        spoilerReplacement: (AnnotatedString) -> String = ::defaultSpoilerReplacement,
+        inlineImageReplacement: ((InlineImageInfo) -> String)? = ::defaultInlineImageReplacement
     ): AnnotatedString {
         // Strip spoilers, formatting, and unnecessary whitespace
         return formatter
