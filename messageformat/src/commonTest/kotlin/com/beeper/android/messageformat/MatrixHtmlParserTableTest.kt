@@ -7,12 +7,23 @@ import kotlin.test.assertTrue
 
 class MatrixHtmlParserTableTest {
     private val parser = MatrixHtmlParser()
+    private val richTableFallbackStyle = MatrixBodyPreFormatStyle(
+        formatTableFallback = { table ->
+            val rows = table.rows.joinToString(separator = "\n") { row ->
+                row.cells.joinToString(separator = "\t") { it.content.text.text }
+            }
+            listOfNotNull(
+                table.caption?.text?.text?.takeIf(String::isNotEmpty),
+                rows.takeIf(String::isNotEmpty),
+            ).joinToString(separator = "\n").ifEmpty { " " }
+        },
+    )
 
     @Test
     fun parsesTableFallbackAndMetadata() {
         val result = parser.parseHtml(
             input = "<table><thead><tr><th><b>Head</b></th></tr></thead><tbody><tr><td>Cell</td></tr></tbody></table>",
-            style = MatrixBodyPreFormatStyle(),
+            style = richTableFallbackStyle,
             allowRoomMention = true,
         )
 
@@ -71,7 +82,7 @@ class MatrixHtmlParserTableTest {
     fun preservesFormattedCellContent() {
         val result = parser.parseHtml(
             input = "<table><tr><th><a href='https://example.com'>Head</a></th><td><code>Cell</code></td></tr></table>",
-            style = MatrixBodyPreFormatStyle(),
+            style = richTableFallbackStyle,
             allowRoomMention = true,
         )
 
@@ -88,7 +99,7 @@ class MatrixHtmlParserTableTest {
     fun preservesFormattedCaptionContent() {
         val result = parser.parseHtml(
             input = "<table><caption><b>Monthly</b> <a href='https://example.com'>report</a></caption><tr><td>Cell</td></tr></table>",
-            style = MatrixBodyPreFormatStyle(),
+            style = richTableFallbackStyle,
             allowRoomMention = true,
         )
 
@@ -98,5 +109,39 @@ class MatrixHtmlParserTableTest {
         assertEquals("\u200BMonthly report\nCell", result.text.text)
         assertEquals("Monthly report", caption.text)
         assertTrue(caption.getStringAnnotations(MatrixBodyAnnotations.WEB_LINK, 0, caption.length).isNotEmpty())
+    }
+
+    @Test
+    fun usesCustomFallbackWithCompleteTableInfo() {
+        var callbackTable: InlineTableInfo? = null
+        val result = parser.parseHtml(
+            input = "<table><caption>Caption</caption><tr><th>Head</th><td>Cell</td></tr></table>",
+            style = MatrixBodyPreFormatStyle(
+                formatTableFallback = {
+                    callbackTable = it
+                    "Custom table"
+                },
+            ),
+            allowRoomMention = true,
+        )
+
+        assertEquals("\u200BCustom table", result.text.text)
+        val table = assertNotNull(callbackTable)
+        assertEquals("Caption", table.caption?.text?.text)
+        assertEquals(1, table.rows.size)
+        assertEquals(true, table.rows.single().cells[0].isHeader)
+        assertEquals("Cell", table.rows.single().cells[1].content.text.text)
+        assertEquals(table, result.inlineTables[MatrixBodyAnnotations.INLINE_TABLE_PREFIX + "0"])
+    }
+
+    @Test
+    fun replacesEmptyCustomFallbackWithSpace() {
+        val result = parser.parseHtml(
+            input = "<table><tr><td>Cell</td></tr></table>",
+            style = MatrixBodyPreFormatStyle(formatTableFallback = { "" }),
+            allowRoomMention = true,
+        )
+
+        assertEquals("\u200B ", result.text.text)
     }
 }

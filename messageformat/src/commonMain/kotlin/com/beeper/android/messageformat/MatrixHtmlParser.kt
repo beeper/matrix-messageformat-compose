@@ -410,7 +410,7 @@ class MatrixHtmlParser(
 
     private fun Element.parseTableInfo(
         ctx: RenderContext,
-    ): Pair<InlineTableInfo, String> {
+    ): InlineTableInfo {
         val caption = children().firstOrNull { it.normalName() == "caption" }?.let {
             parseNodesToResult(it.childNodes(), ctx.style, ctx.allowRoomMention)
         }
@@ -423,16 +423,7 @@ class MatrixHtmlParser(
             }
             TableRowInfo(cells = cells)
         }
-        val tableInfo = InlineTableInfo(rows = rows, caption = caption, indentionDepth = ctx.indentedBlockDepth)
-        val rowFallback = rows.joinToString(separator = "\n") { row ->
-            row.cells.joinToString(separator = "\t") { cell ->
-                cell.content.text.text
-            }
-        }
-        val fallback = listOfNotNull(caption?.text?.text?.takeIf(String::isNotEmpty), rowFallback.takeIf(String::isNotEmpty))
-            .joinToString(separator = "\n")
-            .ifEmpty { " " }
-        return tableInfo to fallback
+        return InlineTableInfo(rows = rows, caption = caption, indentionDepth = ctx.indentedBlockDepth)
     }
 
     private fun Builder.appendElement(
@@ -551,7 +542,8 @@ class MatrixHtmlParser(
             }
             "table" -> {
                 // No newline separation needed, since we should have a wrapping paragraph style
-                val (tableInfo, fallback) = el.parseTableInfo(ctx)
+                val tableInfo = el.parseTableInfo(ctx)
+                val fallback = ctx.style.formatTableFallback(tableInfo).ifEmpty { " " }
                 val id = "${MatrixBodyAnnotations.INLINE_TABLE_PREFIX}${resultMeta.inlineTables.size}"
                 withAnnotation(ctx, MatrixBodyAnnotations.TABLE, ctx.indentedBlockDepth.toString()) { _ ->
                     // Lead with a zero-width space: lines consisting only of an inline content

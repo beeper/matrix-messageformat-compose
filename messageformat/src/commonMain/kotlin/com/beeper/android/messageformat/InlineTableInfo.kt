@@ -17,3 +17,5 @@ data class TableCellInfo(
     val isHeader: Boolean,
     val content: MatrixBodyParseResult,
 )
+
+internal expect fun defaultTableFallback(table: InlineTableInfo): String
