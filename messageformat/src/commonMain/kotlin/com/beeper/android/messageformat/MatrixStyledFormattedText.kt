@@ -64,7 +64,18 @@ fun MatrixStyledFormattedText(
     }
     val renderState = rememberMatrixFormatRenderState(styledText, drawStyle, interactionState)
     val tableHeights = remember(parseResult) { mutableStateMapOf<String, Int>() }
-    val resolvedTextColor = color.takeOrElse { style.color.takeOrElse { LocalContentColor.current } }
+    val effectiveStyle = style.merge(
+        color = color,
+        fontSize = fontSize,
+        fontWeight = fontWeight,
+        fontStyle = fontStyle,
+        fontFamily = fontFamily,
+        letterSpacing = letterSpacing,
+        textDecoration = textDecoration,
+        textAlign = textAlign ?: TextAlign.Unspecified,
+        lineHeight = lineHeight,
+    )
+    val resolvedTextColor = effectiveStyle.color.takeOrElse { LocalContentColor.current }
     // Note: the box wraps the Text while the caller's modifier stays on the Text, so
     // width-modifying caller modifiers (e.g. padding) slightly over-report the width
     // available to table placeholders.
@@ -73,7 +84,7 @@ fun MatrixStyledFormattedText(
         val fullInlineContent = if (maxWidth != null) {
             baseInlineContent + parseResult.inlineTables.toTableInlineContent(
                 maxWidth = maxWidth,
-                style = style,
+                style = effectiveStyle,
                 textColor = resolvedTextColor,
                 drawStyle = drawStyle,
                 formatter = formatter,
