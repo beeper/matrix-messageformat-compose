@@ -18,16 +18,18 @@ val parseResult = remember(textInput) {
 }
 MatrixStyledFormattedText(
     parseResult = parseResult,
-    inlineContent = parseResult.inlineImages.toInlineContent(
-        LocalDensity.current,
-        defaultHeight = 20.sp
-    ) { info, modifier ->
-        // Your inline image rendering logic here
-        AsyncImage(
-            model = info.uri,
-            contentDescription = info.alt ?: info.title,
-            modifier = modifier,
-        )
+    inlineContent = { result ->
+        result.inlineImages.toInlineContent(
+            LocalDensity.current,
+            defaultHeight = 20.sp,
+        ) { info, modifier ->
+            // Your inline image rendering logic here
+            AsyncImage(
+                model = info.uri,
+                contentDescription = info.alt ?: info.title,
+                modifier = modifier,
+            )
+        }
     },
 )
 ```
