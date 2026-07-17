@@ -42,6 +42,7 @@ abstract class MatrixBodyStyledFormatter {
     abstract fun formatUnorderedListItem(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>?
     abstract fun formatOrderedListItem(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>?
     abstract fun formatTable(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>?
+    abstract fun tableIndention(depth: Int): TextUnit
     abstract fun formatDetailsSummary(revealId: Int, context: FormatContext): List<AnnotatedString.Annotation>?
     abstract fun formatDetailsContent(revealId: Int, context: FormatContext): List<AnnotatedString.Annotation>?
 
@@ -480,6 +481,10 @@ open class DefaultMatrixBodyStyledFormatter(
 
     override fun formatTable(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>? {
         return listOf(blockQuoteParagraphStyle(depth))
+    }
+
+    override fun tableIndention(depth: Int): TextUnit {
+        return blockQuoteParagraphStyle(depth).textIndent?.firstLine ?: 0.sp
     }
 
     override fun formatDetailsSummary(

@@ -1,5 +1,6 @@
 package com.beeper.android.messageformat
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -7,6 +8,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import java.util.regex.Pattern
 
 const val DEFAULT_UNORDERED_BULLET_STRING = "\u2022 "
@@ -40,6 +43,16 @@ data class MatrixBodyPreFormatStyle(
     val autoLinkUrlPattern: Pattern? = DEFAULT_WEB_URL_PATTERN,
     val autoLinkEmailAddressPattern: Pattern? = DEFAULT_EMAIL_ADDRESS_PATTERN,
     val isValidInlineImageUri: (String) -> Boolean = MatrixPatterns::isValidMatrixUri,
+)
+
+/**
+ * Table colors and dimensions. Unspecified colors derive from the resolved text color.
+ */
+data class MatrixTableStyle(
+    val headerBackgroundColor: Color = Color.Unspecified,
+    val gridColor: Color = Color.Unspecified,
+    val gridLineWidth: Dp = 1.dp,
+    val cellPadding: PaddingValues = PaddingValues(4.dp),
 )
 
 /**
@@ -156,5 +169,6 @@ data class MatrixBodyDrawStyle(
             size = Size(size.width, 4f * density),
             cornerRadius = CornerRadius(4f * density, 4f * density)
         )
-    }
+    },
+    val tableStyle: MatrixTableStyle = MatrixTableStyle(),
 )

@@ -180,16 +180,18 @@ fun TextRenderScreen() {
                             SelectionContainer {
                                 MatrixStyledFormattedText(
                                     parseResult = parseResult,
-                                    inlineContent = parseResult.inlineImages.toInlineContent(
-                                        density,
-                                        renderTextStyle.fontSize
-                                    ) { info, modifier ->
-                                        // Playground doesn't have a Matrix client for fetching images, just do a placeholder icon
-                                        Image(
-                                            Icons.Default.Image,
-                                            info.alt ?: info.title,
-                                            modifier,
-                                        )
+                                    inlineContent = { result: MatrixBodyParseResult ->
+                                        result.inlineImages.toInlineContent(
+                                            density,
+                                            renderTextStyle.fontSize
+                                        ) { info, modifier ->
+                                            // Playground doesn't have a Matrix client for fetching images, just do a placeholder icon
+                                            Image(
+                                                Icons.Default.Image,
+                                                info.alt ?: info.title,
+                                                modifier,
+                                            )
+                                        }
                                     },
                                     color = MaterialTheme.colorScheme.onSurface,
                                     style = MaterialTheme.typography.bodyLarge.copy(

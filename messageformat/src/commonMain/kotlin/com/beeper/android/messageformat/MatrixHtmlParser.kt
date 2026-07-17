@@ -423,7 +423,7 @@ class MatrixHtmlParser(
             }
             TableRowInfo(cells = cells)
         }
-        val tableInfo = InlineTableInfo(rows = rows, caption = caption)
+        val tableInfo = InlineTableInfo(rows = rows, caption = caption, indentionDepth = ctx.indentedBlockDepth)
         val rowFallback = rows.joinToString(separator = "\n") { row ->
             row.cells.joinToString(separator = "\t") { cell ->
                 cell.content.text.text
@@ -550,12 +550,15 @@ class MatrixHtmlParser(
                 PreviousRenderedInfo(nextShouldTrimBlank = true)
             }
             "table" -> {
-                if (previousRenderedInfo?.nextShouldTrimBlank == false) {
-                    ensureNewlineSeparation("table1", null)
-                }
+                // No newline separation needed, since we should have a wrapping paragraph style
                 val (tableInfo, fallback) = el.parseTableInfo(ctx)
                 val id = "${MatrixBodyAnnotations.INLINE_TABLE_PREFIX}${resultMeta.inlineTables.size}"
                 withAnnotation(ctx, MatrixBodyAnnotations.TABLE, ctx.indentedBlockDepth.toString()) { _ ->
+                    // Lead with a zero-width space: lines consisting only of an inline content
+                    // placeholder do not get paragraph TextIndent applied and report zero line
+                    // left/right positions (at least on desktop targets), breaking indention of
+                    // tables in block quotes or lists, including their quote bar positioning
+                    append("\u200B")
                     appendInlineContent(id, fallback)
                 }
                 resultMeta.inlineTables[id] = tableInfo

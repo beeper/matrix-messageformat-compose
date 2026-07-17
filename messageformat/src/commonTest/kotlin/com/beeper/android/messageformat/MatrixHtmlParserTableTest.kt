@@ -16,7 +16,7 @@ class MatrixHtmlParserTableTest {
             allowRoomMention = true,
         )
 
-        assertEquals("Head\nCell", result.text.text)
+        assertEquals("\u200BHead\nCell", result.text.text)
 
         val tableAnnotation = result.text.getStringAnnotations(MatrixBodyAnnotations.TABLE, 0, result.text.length).single()
         assertEquals(0, tableAnnotation.start)
@@ -25,10 +25,46 @@ class MatrixHtmlParserTableTest {
 
         val table = assertNotNull(result.inlineTables[MatrixBodyAnnotations.INLINE_TABLE_PREFIX + "0"])
         assertEquals(2, table.rows.size)
+        assertEquals(0, table.indentionDepth)
         assertEquals(true, table.rows[0].cells.single().isHeader)
         assertEquals(false, table.rows[1].cells.single().isHeader)
         assertEquals("Head", table.rows[0].cells.single().content.text.text)
         assertEquals("Cell", table.rows[1].cells.single().content.text.text)
+    }
+
+    @Test
+    fun tracksDepthInBlockQuote() {
+        val result = parser.parseHtml(
+            input = "<blockquote><table><tr><td>Cell</td></tr></table></blockquote>",
+            style = MatrixBodyPreFormatStyle(),
+            allowRoomMention = true,
+        )
+
+        val table = assertNotNull(result.inlineTables[MatrixBodyAnnotations.INLINE_TABLE_PREFIX + "0"])
+        assertEquals(1, table.indentionDepth)
+
+        val tableAnnotation = result.text.getStringAnnotations(MatrixBodyAnnotations.TABLE, 0, result.text.length).single()
+        assertEquals(table.indentionDepth.toString(), tableAnnotation.item)
+    }
+
+    @Test
+    fun tracksDepthInNestedList() {
+        val result = parser.parseHtml(
+            input = "<ul><li>Item<ul><li><table><tr><td>Cell</td></tr></table></li></ul></li></ul>",
+            style = MatrixBodyPreFormatStyle(),
+            allowRoomMention = true,
+        )
+
+        val table = assertNotNull(result.inlineTables[MatrixBodyAnnotations.INLINE_TABLE_PREFIX + "0"])
+        assertEquals(2, table.indentionDepth)
+
+        val tableAnnotation = result.text.getStringAnnotations(MatrixBodyAnnotations.TABLE, 0, result.text.length).single()
+        assertEquals(table.indentionDepth.toString(), tableAnnotation.item)
+    }
+
+    @Test
+    fun plaintextFormatterHasNoTableIndention() {
+        assertEquals(0f, MatrixBodyToPlaintextFormatter().tableIndention(3).value)
     }
 
     @Test
@@ -43,7 +79,7 @@ class MatrixHtmlParserTableTest {
         val headerCell = table.rows.single().cells[0].content.text
         val bodyCell = table.rows.single().cells[1].content.text
 
-        assertEquals("Head\tCell", result.text.text)
+        assertEquals("\u200BHead\tCell", result.text.text)
         assertTrue(headerCell.getStringAnnotations(MatrixBodyAnnotations.WEB_LINK, 0, headerCell.length).isNotEmpty())
         assertTrue(bodyCell.getStringAnnotations(MatrixBodyAnnotations.INLINE_CODE, 0, bodyCell.length).isNotEmpty())
     }
@@ -59,7 +95,7 @@ class MatrixHtmlParserTableTest {
         val table = assertNotNull(result.inlineTables[MatrixBodyAnnotations.INLINE_TABLE_PREFIX + "0"])
         val caption = assertNotNull(table.caption).text
 
-        assertEquals("Monthly report\nCell", result.text.text)
+        assertEquals("\u200BMonthly report\nCell", result.text.text)
         assertEquals("Monthly report", caption.text)
         assertTrue(caption.getStringAnnotations(MatrixBodyAnnotations.WEB_LINK, 0, caption.length).isNotEmpty())
     }

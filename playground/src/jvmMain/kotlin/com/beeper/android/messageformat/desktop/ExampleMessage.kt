@@ -110,6 +110,7 @@ Auto-linkified user link: https://matrix.to/#/@spiritcroc:matrix.org
 <p>Not quote</p>
     
 <table>
+  <caption><b>Monthly</b> savings report</caption>
   <thead>
     <tr>
       <th>Month</th>
@@ -146,6 +147,45 @@ Auto-linkified user link: https://matrix.to/#/@spiritcroc:matrix.org
     </tr>
   </tbody>
 </table>
+
+<blockquote>
+  <p>Someone quoted a table:</p>
+  <table>
+    <tr>
+      <th>Quoted</th>
+      <th>Table</th>
+    </tr>
+    <tr>
+      <td>should be indented</td>
+      <td>and <span data-mx-color='#ffffff' data-mx-bg-color='#0000AA'>correspondingly</span> narrower</td>
+    </tr>
+  </table>
+  <blockquote>
+    <table>
+      <tr>
+        <td>even</td>
+        <td>deeper</td>
+      </tr>
+    </table>
+  </blockquote>
+</blockquote>
+
+<ul>
+  <li>
+    <p>A table in a bullet list:</p>
+    <table>
+      <tr>
+        <th>Listed</th>
+        <th>Table</th>
+      </tr>
+      <tr>
+        <td>should be indented</td>
+        <td>and correspondingly narrower</td>
+      </tr>
+    </table>
+  </li>
+  <li>Another bullet after the table</li>
+</ul>
 
 <h2>Color and Style</h2>
 <p><font color='#ff0000'>Red text</font>, <font color='#00aa00'>green text</font>, and <span data-mx-color='#ffffff' data-mx-bg-color='#0000ff'>text on blue</span>.</p>

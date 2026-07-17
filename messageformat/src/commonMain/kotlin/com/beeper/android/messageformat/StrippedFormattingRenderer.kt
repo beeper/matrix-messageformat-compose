@@ -4,6 +4,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.sp
 import co.touchlab.kermit.Logger
 import kotlinx.serialization.json.Json
 
@@ -21,6 +23,7 @@ open class MatrixBodyToPlaintextFormatter : MatrixBodyStyledFormatter() {
     override fun formatUnorderedListItem(depth: Int, context: FormatContext) = listOf(ParagraphStyle())
     override fun formatOrderedListItem(depth: Int, context: FormatContext) = listOf(ParagraphStyle())
     override fun formatTable(depth: Int, context: FormatContext) = listOf(ParagraphStyle())
+    override fun tableIndention(depth: Int): TextUnit = 0.sp
     override fun formatDetailsSummary(revealId: Int, context: FormatContext) = listOf(ParagraphStyle())
     override fun formatDetailsContent(revealId: Int, context: FormatContext) = listOf(ParagraphStyle())
 }
@@ -43,6 +46,8 @@ object StrippedFormattingRenderer {
             spoilerReplacement,
             inlineImageReplacement
         ).toString()
+            // Zero-width spaces, e.g. leading inline table placeholders for indention purposes
+            .replace("\u200B", "")
             .trim()
             .replace(if (stripNewlines) STRIP_WHITESPACE_REGEX else STRIP_WHITESPACE_EXCEPT_NEWLINES_REGEX, " ")
             .let {
