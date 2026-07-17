@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.sp
  *  [Placeholder] height can follow dynamic content (e.g. expanding details tags in cells).
  */
 @Composable
-internal fun Map<String, InlineTableInfo>.toTableInlineContent(
+fun Map<String, InlineTableInfo>.toTableInlineContent(
     maxWidth: Dp,
     style: TextStyle,
     textColor: Color,
@@ -127,7 +127,7 @@ private fun estimateTableHeight(
  * Renders one parsed table: centered caption above an equal-column-width grid.
  */
 @Composable
-internal fun MatrixInlineTable(
+fun MatrixInlineTable(
     info: InlineTableInfo,
     style: TextStyle,
     textColor: Color,
