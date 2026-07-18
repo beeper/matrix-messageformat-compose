@@ -14,13 +14,13 @@ import androidx.compose.ui.unit.Dp
 fun ConditionalBoxWithConstraints(
     enabled: Boolean,
     modifier: Modifier = Modifier,
-    content: @Composable (maxWidth: Dp?) -> Unit,
+    content: @Composable (Modifier, maxWidth: Dp?) -> Unit,
 ) {
     if (enabled) {
         BoxWithConstraints(modifier) {
-            content(this.maxWidth)
+            content(Modifier, this.maxWidth)
         }
     } else {
-        content(null)
+        content(modifier, null)
     }
 }

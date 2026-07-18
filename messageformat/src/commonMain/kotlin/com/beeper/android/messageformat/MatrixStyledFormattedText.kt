@@ -79,7 +79,10 @@ fun MatrixStyledFormattedText(
     // Note: the box wraps the Text while the caller's modifier stays on the Text, so
     // width-modifying caller modifiers (e.g. padding) slightly over-report the width
     // available to table placeholders.
-    ConditionalBoxWithConstraints(enabled = parseResult.inlineTables.isNotEmpty()) { maxWidth ->
+    ConditionalBoxWithConstraints(
+        enabled = parseResult.inlineTables.isNotEmpty(),
+        modifier = modifier,
+    ) { modifier, maxWidth ->
         val baseInlineContent = inlineContent(parseResult)
         val fullInlineContent = if (maxWidth != null) {
             baseInlineContent + parseResult.inlineTables.toTableInlineContent(
