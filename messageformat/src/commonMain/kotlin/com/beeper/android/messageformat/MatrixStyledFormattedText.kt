@@ -76,9 +76,6 @@ fun MatrixStyledFormattedText(
         lineHeight = lineHeight,
     )
     val resolvedTextColor = effectiveStyle.color.takeOrElse { LocalContentColor.current }
-    // Note: the box wraps the Text while the caller's modifier stays on the Text, so
-    // width-modifying caller modifiers (e.g. padding) slightly over-report the width
-    // available to table placeholders.
     ConditionalBoxWithConstraints(
         enabled = parseResult.inlineTables.isNotEmpty(),
         modifier = modifier,
