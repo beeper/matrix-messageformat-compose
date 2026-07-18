@@ -4,12 +4,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.LinkAnnotation
@@ -46,7 +49,11 @@ fun MatrixStyledFormattedText(
     softWrap: Boolean = true,
     maxLines: Int = Int.MAX_VALUE,
     minLines: Int = 1,
-    inlineContent: Map<String, InlineTextContent>,
+    /**
+     * Produces inline content for the given parse result. This is also used for table cells,
+     * captions, and recursively nested tables, which each carry their own inline content.
+     */
+    inlineContent: @Composable (MatrixBodyParseResult) -> Map<String, InlineTextContent>,
     onTextLayout: ((TextLayoutResult) -> Unit)? = null,
     onLinkLongPress: ((LinkAnnotation) -> Unit)? = null,
     onClick: (() -> Unit)? = null,
@@ -56,55 +63,88 @@ fun MatrixStyledFormattedText(
         formatter.applyStyle(parseResult, interactionState)
     }
     val renderState = rememberMatrixFormatRenderState(styledText, drawStyle, interactionState)
-    Text(
-        text = renderState.text,
-        modifier = modifier.matrixBodyDrawWithContent(
-            state = renderState,
-            interactionState = interactionState,
-        ).then(
-            if (onLinkLongPress != null) {
-                Modifier.linkLongPress(
-                    state = renderState,
-                    onLinkLongPress = onLinkLongPress,
-                    onOtherLongPress = onLongPress,
-                ).then(
-                    if (onClick != null)
-                        Modifier.clickable(onClick = onClick)
-                    else
-                        Modifier
-                )
-            } else if (onLongPress != null) {
-                Modifier.combinedClickable(
-                    onClick = onClick ?: {},
-                    onLongClick = onLongPress,
-                )
-            } else if (onClick != null) {
-                Modifier.clickable(onClick = onClick)
-            } else {
-                Modifier
-            }
-        ),
-        style = style,
+    val tableHeights = remember(parseResult) { mutableStateMapOf<String, Int>() }
+    val effectiveStyle = style.merge(
         color = color,
-        autoSize = autoSize,
         fontSize = fontSize,
-        fontStyle = fontStyle,
         fontWeight = fontWeight,
+        fontStyle = fontStyle,
         fontFamily = fontFamily,
         letterSpacing = letterSpacing,
         textDecoration = textDecoration,
-        textAlign = textAlign,
+        textAlign = textAlign ?: TextAlign.Unspecified,
         lineHeight = lineHeight,
-        overflow = overflow,
-        softWrap = softWrap,
-        maxLines = maxLines,
-        minLines = minLines,
-        inlineContent = inlineContent,
-        onTextLayout = onTextLayout?.let {{
-            renderState.onMatrixBodyLayout(it)
-            onTextLayout(it)
-        }} ?: renderState::onMatrixBodyLayout,
     )
+    val resolvedTextColor = effectiveStyle.color.takeOrElse { LocalContentColor.current }
+    // Note: the box wraps the Text while the caller's modifier stays on the Text, so
+    // width-modifying caller modifiers (e.g. padding) slightly over-report the width
+    // available to table placeholders.
+    ConditionalBoxWithConstraints(enabled = parseResult.inlineTables.isNotEmpty()) { maxWidth ->
+        val baseInlineContent = inlineContent(parseResult)
+        val fullInlineContent = if (maxWidth != null) {
+            baseInlineContent + parseResult.inlineTables.toTableInlineContent(
+                maxWidth = maxWidth,
+                style = effectiveStyle,
+                textColor = resolvedTextColor,
+                drawStyle = drawStyle,
+                formatter = formatter,
+                inlineContent = inlineContent,
+                tableHeights = tableHeights,
+                onLinkLongPress = onLinkLongPress,
+            )
+        } else {
+            baseInlineContent
+        }
+        Text(
+            text = renderState.text,
+            modifier = modifier.matrixBodyDrawWithContent(
+                state = renderState,
+                interactionState = interactionState,
+            ).then(
+                if (onLinkLongPress != null) {
+                    Modifier.linkLongPress(
+                        state = renderState,
+                        onLinkLongPress = onLinkLongPress,
+                        onOtherLongPress = onLongPress,
+                    ).then(
+                        if (onClick != null)
+                            Modifier.clickable(onClick = onClick)
+                        else
+                            Modifier
+                    )
+                } else if (onLongPress != null) {
+                    Modifier.combinedClickable(
+                        onClick = onClick ?: {},
+                        onLongClick = onLongPress,
+                    )
+                } else if (onClick != null) {
+                    Modifier.clickable(onClick = onClick)
+                } else {
+                    Modifier
+                }
+            ),
+            style = style,
+            color = color,
+            autoSize = autoSize,
+            fontSize = fontSize,
+            fontStyle = fontStyle,
+            fontWeight = fontWeight,
+            fontFamily = fontFamily,
+            letterSpacing = letterSpacing,
+            textDecoration = textDecoration,
+            textAlign = textAlign,
+            lineHeight = lineHeight,
+            overflow = overflow,
+            softWrap = softWrap,
+            maxLines = maxLines,
+            minLines = minLines,
+            inlineContent = fullInlineContent,
+            onTextLayout = onTextLayout?.let {{
+                renderState.onMatrixBodyLayout(it)
+                onTextLayout(it)
+            }} ?: renderState::onMatrixBodyLayout,
+        )
+    }
 }
 
 @Composable

@@ -61,11 +61,13 @@ class MatrixHtmlParser(
 
     private data class RenderResultMeta(
         val inlineImages: MutableMap<String, InlineImageInfo> = mutableMapOf(),
+        val inlineTables: MutableMap<String, InlineTableInfo> = mutableMapOf(),
         val expandableItems: MutableSet<Int> = mutableSetOf(),
     ) {
         fun toResult(text: AnnotatedString) = MatrixBodyParseResult(
             text = text,
             inlineImages = inlineImages.toPersistentMap(),
+            inlineTables = inlineTables.toPersistentMap(),
             expandableItems = expandableItems.toPersistentSet(),
         )
     }
@@ -372,6 +374,58 @@ class MatrixHtmlParser(
         return PreviousRenderedInfo(nextShouldTrimBlank = true)
     }
 
+    private fun parseNodesToResult(
+        nodes: List<Node>,
+        style: MatrixBodyPreFormatStyle,
+        allowRoomMention: Boolean,
+    ): MatrixBodyParseResult {
+        val resultMeta = RenderResultMeta()
+        val annotatedString = buildAnnotatedString {
+            appendNodes(nodes, RenderContext(style, allowRoomMention), resultMeta)
+        }
+        return resultMeta.toResult(annotatedString)
+    }
+
+    private fun Element.tableRows(): List<Element> {
+        return childNodes().flatMap { node ->
+            when (node) {
+                is Element -> when (node.normalName()) {
+                    "thead", "tbody" -> node.children().filter { it.normalName() == "tr" }
+                    "tr" -> listOf(node)
+                    else -> emptyList()
+                }
+                else -> emptyList()
+            }
+        }
+    }
+
+    private fun Element.tableCells(): List<Element> {
+        return children().filter {
+            when (it.normalName()) {
+                "th", "td" -> true
+                else -> false
+            }
+        }
+    }
+
+    private fun Element.parseTableInfo(
+        ctx: RenderContext,
+    ): InlineTableInfo {
+        val caption = children().firstOrNull { it.normalName() == "caption" }?.let {
+            parseNodesToResult(it.childNodes(), ctx.style, ctx.allowRoomMention)
+        }
+        val rows = tableRows().map { row ->
+            val cells = row.tableCells().map { cell ->
+                TableCellInfo(
+                    isHeader = cell.normalName() == "th",
+                    content = parseNodesToResult(cell.childNodes(), ctx.style, ctx.allowRoomMention),
+                )
+            }
+            TableRowInfo(cells = cells)
+        }
+        return InlineTableInfo(rows = rows, caption = caption, indentionDepth = ctx.indentedBlockDepth)
+    }
+
     private fun Builder.appendElement(
         el: Element,
         lookahead: Lookahead,
@@ -485,6 +539,22 @@ class MatrixHtmlParser(
                     append(" ")
                 }
                 PreviousRenderedInfo(nextShouldTrimBlank = true)
+            }
+            "table" -> {
+                // No newline separation needed, since we should have a wrapping paragraph style
+                val tableInfo = el.parseTableInfo(ctx)
+                val fallback = ctx.style.formatTableFallback(tableInfo).ifEmpty { " " }
+                val id = "${MatrixBodyAnnotations.INLINE_TABLE_PREFIX}${resultMeta.inlineTables.size}"
+                withAnnotation(ctx, MatrixBodyAnnotations.TABLE, ctx.indentedBlockDepth.toString()) { _ ->
+                    // Lead with a zero-width space: lines consisting only of an inline content
+                    // placeholder do not get paragraph TextIndent applied and report zero line
+                    // left/right positions (at least on desktop targets), breaking indention of
+                    // tables in block quotes or lists, including their quote bar positioning
+                    append("\u200B")
+                    appendInlineContent(id, fallback)
+                }
+                resultMeta.inlineTables[id] = tableInfo
+                PreviousRenderedInfo(nextShouldTrimBlank = true, hasImplicitNewline = true)
             }
 
             // Horizontal divider line
@@ -689,6 +759,9 @@ class MatrixHtmlParser(
             // Legacy reply fallback, ignore.
             "mx-reply" -> previousRenderedInfo
 
+            // Table structure is handled by <table> itself.
+            "thead", "tbody", "tr", "th", "td" -> appendNodes(el.childNodes(), ctx, resultMeta)
+
             else -> {
                 // Unknown tags are ignored but children are parsed to keep text
                 appendNodes(el.childNodes(), ctx, resultMeta)
@@ -727,7 +800,8 @@ class MatrixHtmlParser(
             is Element -> when (it.normalName()) {
                 "ul",
                 "ol",
-                 "blockquote" -> true
+                "blockquote",
+                "table" -> true
                 else -> false
             }
             else -> false

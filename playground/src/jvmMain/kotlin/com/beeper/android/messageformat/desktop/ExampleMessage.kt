@@ -108,6 +108,84 @@ Auto-linkified user link: https://matrix.to/#/@spiritcroc:matrix.org
     </blockquote>
 </blockquote>
 <p>Not quote</p>
+    
+<table>
+  <caption><b>Monthly</b> savings report</caption>
+  <thead>
+    <tr>
+      <th>Month</th>
+      <th>Savings</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><details><summary>January</summary>aaaaaaaaaaaaaaaaa</details></td>
+      <td>$100</td>
+    </tr>
+    <tr>
+      <td><del>Strikethrough</del> This is not a moooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonth <span data-mx-spoiler>I guess</span></td>
+      <td>$80</td>
+    </tr>
+    <tr>
+      <td>February</td>
+      <td><img src='mxc://local.beeper.com/spiritcroc_TnTnE9q1fOXD0gtA9UlcBrStvCVLWwAbAtKcAIOKqWJRtQeZwsniGSRVA8xV51tB' alt='Example image' width='200' height='100' data-mx-emoticon>
+        <table>
+          <thead>
+            <tr>
+              <th>Oh no</th>
+              <th>!!!!!</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>you really put a table into the table</td>
+              <td>Why you do this to me <img src='mxc://local.beeper.com/spiritcroc_TnTnE9q1fOXD0gtA9UlcBrStvCVLWwAbAtKcAIOKqWJRtQeZwsniGSRVA8xV51tB' alt='Example image' width='200' height='100' data-mx-emoticon></td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<blockquote>
+  <p>Someone quoted a table:</p>
+  <table>
+    <tr>
+      <th>Quoted</th>
+      <th>Table</th>
+    </tr>
+    <tr>
+      <td>should be indented</td>
+      <td>and <span data-mx-color='#ffffff' data-mx-bg-color='#0000AA'>correspondingly</span> narrower</td>
+    </tr>
+  </table>
+  <blockquote>
+    <table>
+      <tr>
+        <td>even</td>
+        <td>deeper</td>
+      </tr>
+    </table>
+  </blockquote>
+</blockquote>
+
+<ul>
+  <li>
+    <p>A table in a bullet list:</p>
+    <table>
+      <tr>
+        <th>Listed</th>
+        <th>Table</th>
+      </tr>
+      <tr>
+        <td>should be indented</td>
+        <td>and correspondingly narrower</td>
+      </tr>
+    </table>
+  </li>
+  <li>Another bullet after the table</li>
+</ul>
 
 <h2>Color and Style</h2>
 <p><font color='#ff0000'>Red text</font>, <font color='#00aa00'>green text</font>, and <span data-mx-color='#ffffff' data-mx-bg-color='#0000ff'>text on blue</span>.</p>

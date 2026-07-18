@@ -41,6 +41,8 @@ abstract class MatrixBodyStyledFormatter {
     open fun formatMailAddress(address: String, context: FormatContext): List<AnnotatedString.Annotation>? = formatWebLink("mailto:$address", context)
     abstract fun formatUnorderedListItem(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>?
     abstract fun formatOrderedListItem(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>?
+    abstract fun formatTable(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>?
+    abstract fun tableIndention(depth: Int): TextUnit
     abstract fun formatDetailsSummary(revealId: Int, context: FormatContext): List<AnnotatedString.Annotation>?
     abstract fun formatDetailsContent(revealId: Int, context: FormatContext): List<AnnotatedString.Annotation>?
 
@@ -135,6 +137,15 @@ abstract class MatrixBodyStyledFormatter {
                         null
                     } else {
                         formatOrderedListItem(depth, context)
+                    }
+                }
+                MatrixBodyAnnotations.TABLE -> {
+                    val depth = annotation.value.toIntOrNull()
+                    if (depth == null) {
+                        log.e("Table data parsing error, is not an int depth: ${annotation.value}")
+                        null
+                    } else {
+                        formatTable(depth, context)
                     }
                 }
 
@@ -253,7 +264,8 @@ open class DefaultMatrixBodyStyledFormatter(
         return when (tag) {
             MatrixBodyAnnotations.BLOCK_QUOTE,
             MatrixBodyAnnotations.ORDERED_LIST_ITEM,
-            MatrixBodyAnnotations.UNORDERED_LIST_ITEM -> value.toIntOrNull() ?: 0
+            MatrixBodyAnnotations.UNORDERED_LIST_ITEM,
+            MatrixBodyAnnotations.TABLE -> value.toIntOrNull() ?: 0
             else -> 0
         }
     }
@@ -465,6 +477,14 @@ open class DefaultMatrixBodyStyledFormatter(
 
     override fun formatOrderedListItem(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>? {
         return listOf(listItemParagraphStyle(depth, blockIndention))
+    }
+
+    override fun formatTable(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>? {
+        return listOf(blockQuoteParagraphStyle(depth))
+    }
+
+    override fun tableIndention(depth: Int): TextUnit {
+        return blockQuoteParagraphStyle(depth).textIndent?.firstLine ?: 0.sp
     }
 
     override fun formatDetailsSummary(
