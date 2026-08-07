@@ -3,6 +3,7 @@ package com.beeper.android.messageformat.desktop
 internal const val EXAMPLE_MESSAGE = """
 <h1>Matrix HTML Formatting Test</h1>
 <p>This message demonstrates <b>bold</b>, <strong>strong</strong>, <i>italic</i>, <em>emphasized</em>, <u>underlined</u>, <s>strikethrough</s> and <code>@room inline code</code> with some non-code text after.</p>
+<p>Subscript: H<sub>2</sub>O. Superscript: E = mc<sup>2</sup>.</p>
 
 <details><summary>Expandable tag here</summary>
 <h2>Very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header very long header</h2>

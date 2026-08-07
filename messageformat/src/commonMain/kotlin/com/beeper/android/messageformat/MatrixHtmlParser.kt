@@ -7,9 +7,11 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withAnnotation
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.em
 import co.touchlab.kermit.Logger
 import com.beeper.android.messageformat.MatrixPatterns.MATRIX_TO_LINK_PREFIX
 import com.googlecode.htmlcompressor.compressor.HtmlCompressor
@@ -463,6 +465,12 @@ class MatrixHtmlParser(
             "s", "del" -> withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) {
                 appendNodes(el.childNodes(), ctx, resultMeta) ?: PreviousRenderedInfo()
             }
+            "sub" -> withStyle(SpanStyle(fontSize = 0.83.em, baselineShift = BaselineShift.Subscript)) {
+                appendNodes(el.childNodes(), ctx, resultMeta) ?: PreviousRenderedInfo()
+            }
+            "sup" -> withStyle(SpanStyle(fontSize = 0.83.em, baselineShift = BaselineShift.Superscript)) {
+                appendNodes(el.childNodes(), ctx, resultMeta) ?: PreviousRenderedInfo()
+            }
             "font", // font is deprecated in the spec but easy enough to support the same way as spans
             "span" -> {
                 val attributes = SpanAttributes(
@@ -777,6 +785,7 @@ class MatrixHtmlParser(
                 "i", "em",
                 "code",
                 "s", "del",
+                "sub", "sup",
                 "font", "span",
                 "br",
                 "a",
