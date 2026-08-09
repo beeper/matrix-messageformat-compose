@@ -444,8 +444,15 @@ class MatrixHtmlParser(
             "h6" -> appendHeading(el, ctx, resultMeta)
 
             // Styling
-            "b", "strong" -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                appendNodes(el.childNodes(), ctx, resultMeta) ?: PreviousRenderedInfo()
+            "b", "strong" -> {
+                if (ctx.style.stripPerMessageProfileFallback &&
+                    el.hasAttr("data-mx-profile-fallback")) {
+                    previousRenderedInfo
+                } else {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                        appendNodes(el.childNodes(), ctx, resultMeta) ?: PreviousRenderedInfo()
+                    }
+                }
             }
             "i", "em" -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
                 appendNodes(el.childNodes(), ctx, resultMeta) ?: PreviousRenderedInfo()

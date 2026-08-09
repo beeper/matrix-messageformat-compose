@@ -44,6 +44,8 @@ data class MatrixBodyPreFormatStyle(
     val autoLinkUrlPattern: Pattern? = DEFAULT_WEB_URL_PATTERN,
     val autoLinkEmailAddressPattern: Pattern? = DEFAULT_EMAIL_ADDRESS_PATTERN,
     val isValidInlineImageUri: (String) -> Boolean = MatrixPatterns::isValidMatrixUri,
+    /** Set to true if your client supports MSC4144. */
+    val stripPerMessageProfileFallback: Boolean = false,
 )
 
 /**
