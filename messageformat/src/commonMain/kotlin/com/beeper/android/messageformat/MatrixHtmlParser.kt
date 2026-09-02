@@ -666,15 +666,16 @@ class MatrixHtmlParser(
                     ctx.orderedListScope.nextNumber = number + 1
                     Pair("${number}. ", MatrixBodyAnnotations.ORDERED_LIST_ITEM)
                 } else if (ctx.unorderedListScope != null) {
-                    // Determine if this <li> has any non-list content (text or non-list elements)
-                    val hasNonListContent = el.childNodes().any { node ->
+                    // Omit the bullet if contents are just a nested list
+                    val listTags = setOf("ul", "ol")
+                    val wrapsNestedListOnly = el.children().any { it.normalName() in listTags } && el.childNodes().none { node ->
                         when (node) {
                             is TextNode -> node.text().isNotBlank()
-                            is Element -> node.normalName() !in setOf("ul", "ol") && node.text().isNotBlank()
+                            is Element -> node.normalName() !in listTags && node.text().isNotBlank()
                             else -> false
                         }
                     }
-                    if (hasNonListContent) {
+                    if (!wrapsNestedListOnly) {
                         Pair(
                             ctx.unorderedListScope.bullet,
                             MatrixBodyAnnotations.UNORDERED_LIST_ITEM,
