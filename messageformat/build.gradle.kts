@@ -18,7 +18,7 @@ kotlin {
 
     androidLibrary {
         namespace = "com.beeper.android.messageformat"
-        compileSdk = 36
+        compileSdk = 37
         minSdk = 24
 
         withHostTestBuilder {
