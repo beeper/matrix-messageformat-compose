@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
 import co.touchlab.kermit.Logger
 import kotlinx.serialization.json.Json
@@ -364,7 +365,13 @@ open class DefaultMatrixBodyStyledFormatter(
         scale: Float,
         context: FormatContext,
     ) = listOf(
-        baseParagraphStyle(context).copy(lineHeight = textStyle.lineHeight * scale),
+        baseParagraphStyle(context).let {
+            if (textStyle.lineHeight.isSpecified) {
+                it.copy(lineHeight = textStyle.lineHeight * scale)
+            } else {
+                it
+            }
+        },
         SpanStyle(
             fontWeight = FontWeight.Bold,
             fontSize = textStyle.fontSize * scale,
