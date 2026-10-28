@@ -43,6 +43,12 @@ data class SpanAttributes(
     val revealId: Int,
 )
 
+@Serializable
+data class ListItemAttributes(
+    val depth: Int,
+    val bullet: String? = null,
+)
+
 /** Holders of parsed matrix.to links. */
 @Serializable
 sealed interface MatrixToLink {

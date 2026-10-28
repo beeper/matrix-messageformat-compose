@@ -40,8 +40,8 @@ abstract class MatrixBodyStyledFormatter {
     abstract fun formatMessageLink(messageLink: MatrixToLink.MessageLink, context: FormatContext): List<AnnotatedString.Annotation>?
     abstract fun formatWebLink(href: String, context: FormatContext): List<AnnotatedString.Annotation>?
     open fun formatMailAddress(address: String, context: FormatContext): List<AnnotatedString.Annotation>? = formatWebLink("mailto:$address", context)
-    abstract fun formatUnorderedListItem(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>?
-    abstract fun formatOrderedListItem(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>?
+    abstract fun formatUnorderedListItem(attributes: ListItemAttributes, context: FormatContext): List<AnnotatedString.Annotation>?
+    abstract fun formatOrderedListItem(attributes: ListItemAttributes, context: FormatContext): List<AnnotatedString.Annotation>?
     abstract fun formatTable(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>?
     abstract fun tableIndention(depth: Int): TextUnit
     abstract fun formatDetailsSummary(revealId: Int, context: FormatContext): List<AnnotatedString.Annotation>?
@@ -122,22 +122,20 @@ abstract class MatrixBodyStyledFormatter {
                     formatSpan(attributes, context)
                 }
 
-                MatrixBodyAnnotations.UNORDERED_LIST_ITEM -> {
-                    val depth = annotation.value.toIntOrNull()
-                    if (depth == null) {
-                        log.e("Unordered list item data parsing error, is not an int depth: ${annotation.value}")
-                        null
-                    } else {
-                        formatUnorderedListItem(depth, context)
-                    }
-                }
+                MatrixBodyAnnotations.UNORDERED_LIST_ITEM,
                 MatrixBodyAnnotations.ORDERED_LIST_ITEM -> {
-                    val depth = annotation.value.toIntOrNull()
-                    if (depth == null) {
-                        log.e("Ordered list data parsing error, is not an int depth: ${annotation.value}")
+                    val attributes = try {
+                        Json.decodeFromString<ListItemAttributes>(annotation.value)
+                    } catch (e: Exception) {
+                        log.e("List item data parsing error", e)
                         null
-                    } else {
-                        formatOrderedListItem(depth, context)
+                    }
+                    attributes?.let {
+                        if (range.tag == MatrixBodyAnnotations.ORDERED_LIST_ITEM) {
+                            formatOrderedListItem(it, context)
+                        } else {
+                            formatUnorderedListItem(it, context)
+                        }
                     }
                 }
                 MatrixBodyAnnotations.TABLE -> {
@@ -263,9 +261,11 @@ open class DefaultMatrixBodyStyledFormatter(
      */
     open fun paragraphIndentionDepthFor(tag: String, value: String): Int {
         return when (tag) {
-            MatrixBodyAnnotations.BLOCK_QUOTE,
-            MatrixBodyAnnotations.ORDERED_LIST_ITEM,
             MatrixBodyAnnotations.UNORDERED_LIST_ITEM,
+            MatrixBodyAnnotations.ORDERED_LIST_ITEM -> {
+                runCatching { Json.decodeFromString<ListItemAttributes>(value) }.getOrNull()?.depth ?: 0
+            }
+            MatrixBodyAnnotations.BLOCK_QUOTE,
             MatrixBodyAnnotations.TABLE -> value.toIntOrNull() ?: 0
             else -> 0
         }
@@ -274,31 +274,21 @@ open class DefaultMatrixBodyStyledFormatter(
     /**
      * Look up paragraph styles for given depth for [baseParagraphStyle].
      */
-    open fun baseParagraphStyleFor(tag: String, depth: Int): ParagraphStyle {
+    open fun baseParagraphStyleFor(tag: String, depth: Int, bullet: String? = null): ParagraphStyle {
         return when (tag) {
-            MatrixBodyAnnotations.ORDERED_LIST_ITEM -> {
-                listItemParagraphStyle(depth, blockIndention)
-            }
+            MatrixBodyAnnotations.ORDERED_LIST_ITEM,
             MatrixBodyAnnotations.UNORDERED_LIST_ITEM -> {
-                listItemParagraphStyle(depth, cachedBulledWidth(depth))
+                listItemParagraphStyle(depth, bulletWidth(depth, bullet))
             }
             else -> blockQuoteParagraphStyle(depth)
         }
     }
 
-    open fun cachedBulledWidth(depth: Int): TextUnit {
-        return cachedBulletWidth(listBulletForDepth(depth))
+    open fun bulletWidth(depth: Int, bullet: String? = null): TextUnit {
+        return measureBulletWidth(bullet ?: listBulletForDepth(depth))
     }
 
-    open fun orderedListItemBulletWidth(text: AnnotatedString, itemStart: Int): TextUnit {
-        val bulletEnd = text.indexOf(". ", itemStart)
-        if (bulletEnd <= itemStart) {
-            return blockIndention
-        }
-        return cachedBulletWidth(text.substring(itemStart, bulletEnd + 2))
-    }
-
-    private fun cachedBulletWidth(bullet: String): TextUnit {
+    protected fun measureBulletWidth(bullet: String): TextUnit {
         return cachedBulletSizes.getOrPut(bullet) {
             density.run {
                 textMeasurer.measure(bullet, textStyle).size.width.toSp()
@@ -358,9 +348,17 @@ open class DefaultMatrixBodyStyledFormatter(
     open fun baseParagraphStyle(context: FormatContext): ParagraphStyle {
         val annotations =
             context.input.text.getStringAnnotations(context.start, context.end).mapNotNull {
-                val depth = paragraphIndentionDepthFor(it.tag, it.item)
+                val attributes = when (it.tag) {
+                    MatrixBodyAnnotations.ORDERED_LIST_ITEM,
+                    MatrixBodyAnnotations.UNORDERED_LIST_ITEM -> {
+                        runCatching { Json.decodeFromString<ListItemAttributes>(it.item) }
+                            .getOrNull() ?: return@mapNotNull null
+                    }
+                    else -> null
+                }
+                val depth = attributes?.depth ?: paragraphIndentionDepthFor(it.tag, it.item)
                 if (depth > 0) {
-                    Pair(it, depth)
+                    Triple(it.tag, depth, attributes?.bullet)
                 } else {
                     null
                 }
@@ -368,8 +366,8 @@ open class DefaultMatrixBodyStyledFormatter(
         if (annotations.isEmpty()) {
             return ParagraphStyle()
         }
-        val (maxIndentedAnnotation, depth) = annotations.maxBy { it.second }
-        return baseParagraphStyleFor(maxIndentedAnnotation.tag, depth)
+        val (tag, depth, bullet) = annotations.maxBy { it.second }
+        return baseParagraphStyleFor(tag, depth, bullet)
     }
 
     open fun formatHeadingScaled(
@@ -489,12 +487,12 @@ open class DefaultMatrixBodyStyledFormatter(
         )
     }
 
-    override fun formatUnorderedListItem(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>? {
-        return listOf(listItemParagraphStyle(depth, cachedBulledWidth(depth)))
+    override fun formatUnorderedListItem(attributes: ListItemAttributes, context: FormatContext): List<AnnotatedString.Annotation>? {
+        return listOf(listItemParagraphStyle(attributes.depth, bulletWidth(attributes.depth, attributes.bullet)))
     }
 
-    override fun formatOrderedListItem(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>? {
-        return listOf(listItemParagraphStyle(depth, orderedListItemBulletWidth(context.input.text, context.start)))
+    override fun formatOrderedListItem(attributes: ListItemAttributes, context: FormatContext): List<AnnotatedString.Annotation>? {
+        return listOf(listItemParagraphStyle(attributes.depth, bulletWidth(attributes.depth, attributes.bullet)))
     }
 
     override fun formatTable(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>? {
