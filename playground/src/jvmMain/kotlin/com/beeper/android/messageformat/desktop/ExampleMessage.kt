@@ -63,7 +63,17 @@ Auto-linkified user link: https://matrix.to/#/@spiritcroc:matrix.org
 <li>test</li>
 <li value="42">test</li>
 <li>Very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very long item very</li>
-<li>List in list<ol><li>Inner item 1</li><li>Inner item 2</li></ol></li>
+<li>List in list
+    <ol>
+    <li>Inner item 1</li>
+    <li>Inner item 2</li>
+    <li value="100">Long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long</li>
+    <li value="99999">Long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long</li>
+    <li>Inner item 5</li>
+    <li value="6">Inner item 6</li>
+    <li value="6">Inner item 6 again</li>
+    <li>Long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long</li>
+    </ol></li>
 </ol>
 
 <h2>Blockquote</h2>
@@ -103,6 +113,7 @@ Auto-linkified user link: https://matrix.to/#/@spiritcroc:matrix.org
       <li>With</li>
       <li>ordered</li>
       <li>list</li>
+      <li>Long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long inner item long</li>
       </ol>
       <h5>Header in the quote</h5>
       <p>more quoted stuff</p>
