@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import java.util.regex.Pattern
 
-const val DEFAULT_UNORDERED_BULLET_STRING = "\u2022 "
+const val DEFAULT_UNORDERED_BULLET_STRING = "\u2022\u00A0"
 
 // We can "fake" tabs in monospace fonts by counting characters
 fun tabAsSpaces(tabIndexInLine: Int, tabWidth: Int = 8): String {

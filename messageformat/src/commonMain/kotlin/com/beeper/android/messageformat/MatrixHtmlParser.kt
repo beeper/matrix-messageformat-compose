@@ -664,7 +664,7 @@ class MatrixHtmlParser(
                     val number = el.getIntAttrOrNull("value")
                         ?: ctx.orderedListScope.nextNumber
                     ctx.orderedListScope.nextNumber = number + 1
-                    Pair("${number}. ", MatrixBodyAnnotations.ORDERED_LIST_ITEM)
+                    Pair("${number}.\u00A0", MatrixBodyAnnotations.ORDERED_LIST_ITEM)
                 } else if (ctx.unorderedListScope != null) {
                     // Omit the bullet if contents are just a nested list
                     val listTags = setOf("ul", "ol")
