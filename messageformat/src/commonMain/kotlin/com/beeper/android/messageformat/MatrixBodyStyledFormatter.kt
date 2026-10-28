@@ -287,10 +287,21 @@ open class DefaultMatrixBodyStyledFormatter(
     }
 
     open fun cachedBulledWidth(depth: Int): TextUnit {
-        val bullet = listBulletForDepth(depth)
+        return cachedBulletWidth(listBulletForDepth(depth))
+    }
+
+    open fun orderedListItemBulletWidth(text: AnnotatedString, itemStart: Int): TextUnit {
+        val bulletEnd = text.indexOf(". ", itemStart)
+        if (bulletEnd <= itemStart) {
+            return blockIndention
+        }
+        return cachedBulletWidth(text.substring(itemStart, bulletEnd + 2))
+    }
+
+    private fun cachedBulletWidth(bullet: String): TextUnit {
         return cachedBulletSizes.getOrPut(bullet) {
             density.run {
-                textMeasurer.measure(bullet).size.width.toSp()
+                textMeasurer.measure(bullet, textStyle).size.width.toSp()
             }
         }
     }
@@ -483,7 +494,7 @@ open class DefaultMatrixBodyStyledFormatter(
     }
 
     override fun formatOrderedListItem(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>? {
-        return listOf(listItemParagraphStyle(depth, blockIndention))
+        return listOf(listItemParagraphStyle(depth, orderedListItemBulletWidth(context.input.text, context.start)))
     }
 
     override fun formatTable(depth: Int, context: FormatContext): List<AnnotatedString.Annotation>? {
