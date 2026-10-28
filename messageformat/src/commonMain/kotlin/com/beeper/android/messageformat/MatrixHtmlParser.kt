@@ -690,7 +690,11 @@ class MatrixHtmlParser(
                     // li outside of a list, sounds like broken HTML, just render contents
                     appendNodes(el.childNodes(), ctx, resultMeta)
                 } else {
-                    withAnnotation(innerCtx, annotation, ctx.indentedBlockDepth.toString()) { innerCtx ->
+                    val attributes = ListItemAttributes(
+                        depth = ctx.indentedBlockDepth,
+                        bullet = bullet,
+                    )
+                    withAnnotation(innerCtx, annotation, Json.encodeToString(attributes)) { innerCtx ->
                         append(bullet)
                         appendNodes(el.childNodes(), innerCtx, resultMeta)
                             ?: PreviousRenderedInfo(nextShouldTrimBlank = true)

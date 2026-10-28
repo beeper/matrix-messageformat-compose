@@ -20,8 +20,8 @@ open class MatrixBodyToPlaintextFormatter : MatrixBodyStyledFormatter() {
     override fun formatRoomLink(roomLink: MatrixToLink.RoomLink, context: FormatContext) = null
     override fun formatMessageLink(messageLink: MatrixToLink.MessageLink, context: FormatContext) = null
     override fun formatWebLink(href: String, context: FormatContext) = null
-    override fun formatUnorderedListItem(depth: Int, context: FormatContext) = listOf(ParagraphStyle())
-    override fun formatOrderedListItem(depth: Int, context: FormatContext) = listOf(ParagraphStyle())
+    override fun formatUnorderedListItem(attributes: ListItemAttributes, context: FormatContext) = listOf(ParagraphStyle())
+    override fun formatOrderedListItem(attributes: ListItemAttributes, context: FormatContext) = listOf(ParagraphStyle())
     override fun formatTable(depth: Int, context: FormatContext) = listOf(ParagraphStyle())
     override fun tableIndention(depth: Int): TextUnit = 0.sp
     override fun formatDetailsSummary(revealId: Int, context: FormatContext) = listOf(ParagraphStyle())
