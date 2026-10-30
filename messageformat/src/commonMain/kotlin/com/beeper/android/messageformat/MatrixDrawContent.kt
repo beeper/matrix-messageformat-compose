@@ -69,12 +69,21 @@ sealed interface DrawPosition {
 fun MatrixBodyRenderState.onMatrixBodyLayout(
     layoutResult: TextLayoutResult,
 ) {
+    renderResult.value = matrixFormatOnTextRenderResult(text, style, layoutResult)
+}
+
+/** The draw positions of everything in [text] that [style] draws, for a [TextLayoutResult] of that text. */
+fun matrixFormatOnTextRenderResult(
+    text: AnnotatedString,
+    style: MatrixBodyDrawStyle,
+    layoutResult: TextLayoutResult,
+): MatrixFormatOnTextRenderResult {
     // Find room mention bounding boxes if we want to post-process them
-    val roomMentions = flatMapAnnotationsIfSet(style.drawBehindRoomMention, MatrixBodyAnnotations.ROOM_MENTION) { annotation ->
+    val roomMentions = text.flatMapAnnotationsIfSet(style.drawBehindRoomMention, MatrixBodyAnnotations.ROOM_MENTION) { annotation ->
         layoutResult.perLineBoundingBoxesForRange(annotation.start, annotation.end)
     }
     // Find user mention bounding boxes if we want to post-process them
-    val userMentions = flatMapAnnotationsIfSet(style.drawBehindUserMention, MatrixBodyAnnotations.USER_MENTION) { annotation ->
+    val userMentions = text.flatMapAnnotationsIfSet(style.drawBehindUserMention, MatrixBodyAnnotations.USER_MENTION) { annotation ->
         val mention = try {
             Json.decodeFromString<MatrixToLink>(annotation.item) as MatrixToLink.UserMention
         } catch (e: Exception) {
@@ -86,7 +95,7 @@ fun MatrixBodyRenderState.onMatrixBodyLayout(
         }
     }
     // Find block quotes
-    val blockQuotes = mapAnnotationsIfSet(style.drawBehindBlockQuote, MatrixBodyAnnotations.BLOCK_QUOTE) { annotation ->
+    val blockQuotes = text.mapAnnotationsIfSet(style.drawBehindBlockQuote, MatrixBodyAnnotations.BLOCK_QUOTE) { annotation ->
         annotation.item.toIntOrNull()?.let { indention ->
             layoutResult.blockBoundingBox(annotation.start, annotation.end)?.let { rect ->
                 Pair(indention, rect)
@@ -94,14 +103,14 @@ fun MatrixBodyRenderState.onMatrixBodyLayout(
         }
     }
     // Find code blocks
-    val inlineCode = flatMapAnnotationsIfSet(style.drawBehindInlineCode, MatrixBodyAnnotations.INLINE_CODE) { annotation ->
+    val inlineCode = text.flatMapAnnotationsIfSet(style.drawBehindInlineCode, MatrixBodyAnnotations.INLINE_CODE) { annotation ->
         layoutResult.perLineBoundingBoxesForRange(annotation.start, annotation.end)
     }
-    val blockCode = mapAnnotationsIfSet(style.drawBehindBlockCode, MatrixBodyAnnotations.BLOCK_CODE) { annotation ->
+    val blockCode = text.mapAnnotationsIfSet(style.drawBehindBlockCode, MatrixBodyAnnotations.BLOCK_CODE) { annotation ->
         layoutResult.blockBoundingBox(annotation.start, annotation.end)
     }
     // Find spans
-    val spans = flatMapAnnotationsIfSet(style.drawBehindSpan, MatrixBodyAnnotations.SPAN) { annotation ->
+    val spans = text.flatMapAnnotationsIfSet(style.drawBehindSpan, MatrixBodyAnnotations.SPAN) { annotation ->
         val attributes = try {
             Json.decodeFromString<SpanAttributes>(annotation.item)
         } catch (e: Exception) {
@@ -113,32 +122,31 @@ fun MatrixBodyRenderState.onMatrixBodyLayout(
         }
     }
     // Find details tags spans
-    val fullDetailsSummaries = mapAnnotationsIfSet(style.drawBehindDetailsSummary, MatrixBodyAnnotations.DETAILS_SUMMARY) { annotation ->
+    val fullDetailsSummaries = text.mapAnnotationsIfSet(style.drawBehindDetailsSummary, MatrixBodyAnnotations.DETAILS_SUMMARY) { annotation ->
         annotation.item.toIntOrNull()?.let { revealId ->
             layoutResult.blockBoundingBox(annotation.start, annotation.end)?.let { rect ->
                 Pair(revealId, rect)
             }
         }
     }
-    val detailsSummariesFirstLines = mapAnnotationsIfSet(style.drawBehindDetailsSummaryFirstLine, MatrixBodyAnnotations.DETAILS_SUMMARY) { annotation ->
+    val detailsSummariesFirstLines = text.mapAnnotationsIfSet(style.drawBehindDetailsSummaryFirstLine, MatrixBodyAnnotations.DETAILS_SUMMARY) { annotation ->
         annotation.item.toIntOrNull()?.let { revealId ->
             layoutResult.perLineBoundingBoxesForRange(annotation.start, annotation.end).firstOrNull()?.let { rect ->
                 Pair(revealId, rect)
             }
         }
     }
-    val detailsContents = mapAnnotationsIfSet(style.drawBehindDetailsContent, MatrixBodyAnnotations.DETAILS_CONTENT) { annotation ->
+    val detailsContents = text.mapAnnotationsIfSet(style.drawBehindDetailsContent, MatrixBodyAnnotations.DETAILS_CONTENT) { annotation ->
         annotation.item.toIntOrNull()?.let { revealId ->
             layoutResult.blockBoundingBox(annotation.start, annotation.end)?.let { rect ->
                 Pair(revealId, rect)
             }
         }
     }
-    val horizontalRules = flatMapAnnotationsIfSet(style.drawBehindHorizontalRule, MatrixBodyAnnotations.HORIZONTAL_RULE) { annotation ->
+    val horizontalRules = text.flatMapAnnotationsIfSet(style.drawBehindHorizontalRule, MatrixBodyAnnotations.HORIZONTAL_RULE) { annotation ->
         layoutResult.perLineBoundingBoxesForRange(annotation.start, annotation.end)
     }
-    // Result
-    renderResult.value = MatrixFormatOnTextRenderResult(
+    return MatrixFormatOnTextRenderResult(
         textLayoutResult = layoutResult,
         userMentions = userMentions,
         roomMentions = roomMentions,
@@ -153,19 +161,19 @@ fun MatrixBodyRenderState.onMatrixBodyLayout(
     )
 }
 
-private fun <T> MatrixBodyRenderState.mapAnnotationsIfSet(function: Any?, tag: String, map: (AnnotatedString.Range<String>) -> T?): ImmutableList<T> {
+private fun <T> AnnotatedString.mapAnnotationsIfSet(function: Any?, tag: String, map: (AnnotatedString.Range<String>) -> T?): ImmutableList<T> {
     return if (function == null) {
         persistentListOf()
     } else {
-        text.getStringAnnotations(tag, 0, text.length).mapNotNull(map).toPersistentList()
+        getStringAnnotations(tag, 0, length).mapNotNull(map).toPersistentList()
     }
 }
 
-private fun <T> MatrixBodyRenderState.flatMapAnnotationsIfSet(function: Any?, tag: String, map: (AnnotatedString.Range<String>) -> List<T>): ImmutableList<T> {
+private fun <T> AnnotatedString.flatMapAnnotationsIfSet(function: Any?, tag: String, map: (AnnotatedString.Range<String>) -> List<T>): ImmutableList<T> {
     return if (function == null) {
         persistentListOf()
     } else {
-        text.getStringAnnotations(tag, 0, text.length).flatMap(map).toPersistentList()
+        getStringAnnotations(tag, 0, length).flatMap(map).toPersistentList()
     }
 }
 
@@ -182,18 +190,27 @@ fun Modifier.matrixBodyDrawWithContent(
         drawContent()
         return@drawWithContent
     }
-    drawFor(state.style.drawBehindBlockCode, result.blockCode)
-    drawFor(state.style.drawBehindInlineCode, result.inlineCode)
-    drawFor(state.style.drawBehindRoomMention, result.roomMentions)
-    drawFor(state.style.drawBehindUserMention, result.userMentions)
-    drawFor(state.style.drawBehindSpan, result.spans, interactionState)
-    drawFor(state.style.drawBehindDetailsSummary, result.fullDetailsSummaries, interactionState)
-    drawFor(state.style.drawBehindDetailsSummaryFirstLine, result.detailsSummariesFirstLines, interactionState)
-    drawFor(state.style.drawBehindDetailsContent, result.detailsContents, interactionState)
-    drawFor(state.style.drawBehindBlockQuote, result.blockQuotes)
-    drawFor(state.style.drawBehindHorizontalRule, result.horizontalRules)
+    drawMatrixBodyBackgrounds(state.style, result, interactionState)
     drawContent()
     drawFor(state.style.drawAboveSpan, result.spans, interactionState)
+}
+
+/** Draws what [style] draws behind the text, with positions taken from [result]. */
+fun DrawScope.drawMatrixBodyBackgrounds(
+    style: MatrixBodyDrawStyle,
+    result: MatrixFormatOnTextRenderResult,
+    interactionState: MatrixFormatInteractionState,
+) {
+    drawFor(style.drawBehindBlockCode, result.blockCode)
+    drawFor(style.drawBehindInlineCode, result.inlineCode)
+    drawFor(style.drawBehindRoomMention, result.roomMentions)
+    drawFor(style.drawBehindUserMention, result.userMentions)
+    drawFor(style.drawBehindSpan, result.spans, interactionState)
+    drawFor(style.drawBehindDetailsSummary, result.fullDetailsSummaries, interactionState)
+    drawFor(style.drawBehindDetailsSummaryFirstLine, result.detailsSummariesFirstLines, interactionState)
+    drawFor(style.drawBehindDetailsContent, result.detailsContents, interactionState)
+    drawFor(style.drawBehindBlockQuote, result.blockQuotes)
+    drawFor(style.drawBehindHorizontalRule, result.horizontalRules)
 }
 
 private fun <T>DrawScope.drawFor(function: (DrawScope.(T) -> Unit)?, items: List<T>) {
