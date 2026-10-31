@@ -83,8 +83,6 @@ class MatrixMarkdownTextFieldState(
         }
     }
 
-    fun clear() = setContent("")
-
     fun toDraft(parser: MatrixMarkdownParser): MatrixFormattedMessageDraft =
         parser.toDraft(text.toString(), entities)
 

@@ -31,7 +31,6 @@ kotlin {
                 implementation(libs.kotlin.stdlib)
                 api(libs.jetbrains.markdown)
                 api(project(":messageformat"))
-                implementation(compose.runtime)
                 implementation(compose.ui)
                 implementation(libs.kotlinx.serialization.json)
             }
