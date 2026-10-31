@@ -309,6 +309,8 @@ class MatrixHtmlParser(
                 linkedRanges += startInText to endInText
             }
 
+            val roomAliasMatches = MatrixPatterns.ROOM_ALIAS_LINKIFY_REGEX.findAll(text).toList()
+
             // Auto-linkification of hyperlinks
             if (ctx.style.autoLinkUrlPattern != null) {
                 val matcher = ctx.style.autoLinkUrlPattern.matcher(text)
@@ -316,6 +318,11 @@ class MatrixHtmlParser(
                     val startInText = matcher.start()
                     val endInText = matcher.end()
                     if (overlapsExistingLink(startInText, endInText)) {
+                        continue
+                    }
+                    // Android's web URL pattern matches bare domains, including the server part of room aliases.
+                    // Prefer the complete alias, but keep URLs that extend beyond it intact.
+                    if (roomAliasMatches.any { startInText >= it.range.first && endInText <= it.range.last + 1 }) {
                         continue
                     }
                     val url = text.substring(startInText, endInText)
@@ -340,7 +347,7 @@ class MatrixHtmlParser(
             }
 
             // Auto-linkify room aliases in plaintext as well (except in code/pre blocks)
-            MatrixPatterns.ROOM_ALIAS_LINKIFY_REGEX.findAll(text).forEach { match ->
+            roomAliasMatches.forEach { match ->
                 val startInText = match.range.first
                 val endInText = match.range.last + 1
                 if (overlapsExistingLink(startInText, endInText)) {
