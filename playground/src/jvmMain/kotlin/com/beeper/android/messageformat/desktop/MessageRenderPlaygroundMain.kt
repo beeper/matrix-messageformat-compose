@@ -56,7 +56,15 @@ import com.beeper.android.messageformat.MatrixHtmlParser
 import com.beeper.android.messageformat.MatrixBodyPreFormatStyle
 import com.beeper.android.messageformat.MatrixStyledFormattedText
 import com.beeper.android.messageformat.StrippedFormattingRenderer
+import com.beeper.android.messageformat.markdown.MatrixMarkdownParser
+import com.beeper.android.messageformat.markdown.MarkdownFeature
 import com.beeper.android.messageformat.toInlineContent
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.text.TextRange
+import com.beeper.android.messageformat.composer.MatrixMarkdownTextFieldState
+import com.beeper.android.messageformat.composer.MatrixMarkdownTextField
+import com.beeper.android.messageformat.markdown.MatrixInlineEntity
 
 fun main() = application {
     Window(onCloseRequest = ::exitApplication, title = "Message Render Playground") {
@@ -85,6 +93,16 @@ fun TextRenderScreen() {
     var rtlText by remember { mutableStateOf(false) }
     var withFooter by remember { mutableStateOf(false) }
     var showStringAnnotations by remember { mutableStateOf(false) }
+    var markdownInput by remember { mutableStateOf(false) }
+    var markdownFeatures by remember { mutableStateOf(MarkdownFeature.ALL) }
+    val composerState = remember { MatrixMarkdownTextFieldState(EXAMPLE_MARKDOWN) }
+    LaunchedEffect(composerState) {
+        snapshotFlow { composerState.text.toString() }.collect { if (markdownInput) textInput = it }
+    }
+    val markdownParser = remember(markdownFeatures) { MatrixMarkdownParser(markdownFeatures) }
+    val htmlInput = remember(textInput, markdownInput, markdownParser, composerState.entities) {
+        if (markdownInput) markdownParser.toHtml(textInput, composerState.entities) else textInput
+    }
     val parser = remember(newlineDbg) { MatrixHtmlParser(newlineDbg = newlineDbg) }
     val renderTextStyle = MaterialTheme.typography.bodyLarge
     val baseDensity = LocalDensity.current
@@ -123,16 +141,16 @@ fun TextRenderScreen() {
                         detailsSummaryIndicatorPlaceholder = "",
                     )
                 }
-                LaunchedEffect(parser, textInput, preFormatStyle, allowRoomMention) {
+                LaunchedEffect(parser, htmlInput, preFormatStyle, allowRoomMention) {
                     parseResult = parser.parseHtml(
-                        textInput,
+                        htmlInput,
                         preFormatStyle,
                         allowRoomMention = allowRoomMention,
                     )
                 }
-                LaunchedEffect(parser, textInput, strippedPreFormatStyle, allowRoomMention) {
+                LaunchedEffect(parser, htmlInput, strippedPreFormatStyle, allowRoomMention) {
                     strippedParseResult = parser.parseHtml(
-                        textInput,
+                        htmlInput,
                         strippedPreFormatStyle,
                         allowRoomMention = allowRoomMention,
                     )
@@ -317,17 +335,77 @@ fun TextRenderScreen() {
                 ToggleRow("Auto text direction", autoTextDirection) { autoTextDirection = it }
                 ToggleRow("RTL text", rtlText, enabled = !autoTextDirection) { rtlText = it }
                 ToggleRow("Footer", withFooter) { withFooter = it }
+                ToggleRow("Markdown input", markdownInput) {
+                    markdownInput = it
+                    if (it) textInput = composerState.text.toString()
+                    if (!it && textInput == EXAMPLE_MARKDOWN) textInput = EXAMPLE_MESSAGE
+                }
+            }
+            if (markdownInput) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    MarkdownFeature.entries.forEach { feature ->
+                        ToggleRow(feature.name.lowercase().replace('_', ' '), feature in markdownFeatures) { enabled ->
+                            markdownFeatures = if (enabled) markdownFeatures + feature else markdownFeatures - feature
+                        }
+                    }
+                }
             }
             Text(
                 "Input:",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium
             )
-            TextField(
-                value = textInput,
-                onValueChange = { textInput = it },
-                modifier = Modifier.fillMaxSize().weight(1f),
-            )
+            if (markdownInput) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = {
+                        val cursor = composerState.textFieldState.selection
+                        composerState.insertEntity(TextRange(cursor.start, cursor.end), "@Alice") { start, end ->
+                            MatrixInlineEntity.UserMention(start, end, "@alice:example.org")
+                        }
+                    }) { Text("Insert mention") }
+                    TextButton(onClick = {
+                        val cursor = composerState.textFieldState.selection
+                        composerState.insertEntity(TextRange(cursor.start, cursor.end), ":example_emote:") { start, end ->
+                            MatrixInlineEntity.CustomEmote(start, end, "example_emote", "mxc://local.beeper.com/spiritcroc_TnTnE9q1fOXD0gtA9UlcBrStvCVLWwAbAtKcAIOKqWJRtQeZwsniGSRVA8xV51tB")
+                        }
+                    }) { Text("Insert custom emote") }
+                }
+                MatrixMarkdownTextField(
+                    state = composerState,
+                    features = markdownFeatures,
+                    inlineContent = { result ->
+                        result.inlineImages.toInlineContent(LocalDensity.current, MaterialTheme.typography.bodyLarge.fontSize) { info, imageModifier ->
+                            Image(Icons.Default.Image, info.alt ?: info.title, imageModifier)
+                        }
+                    },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                    modifier = Modifier.fillMaxSize().weight(1f)
+                        .border(1.dp, MaterialTheme.colorScheme.outline)
+                        .padding(8.dp),
+                )
+            } else {
+                TextField(
+                    value = textInput,
+                    onValueChange = { textInput = it },
+                    modifier = Modifier.fillMaxSize().weight(1f),
+                )
+            }
+            if (markdownInput) {
+                Text(
+                    "Generated HTML:",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                SelectionContainer(
+                    Modifier.fillMaxWidth()
+                        .heightIn(max = 160.dp)
+                        .border(1.dp, MaterialTheme.colorScheme.outline)
+                        .padding(8.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    Text(htmlInput, style = MaterialTheme.typography.bodySmall)
+                }
+            }
             if (withFooter) {
                 Text(
                     "Footer:",
