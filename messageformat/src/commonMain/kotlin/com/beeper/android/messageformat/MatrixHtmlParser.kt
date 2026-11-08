@@ -411,7 +411,9 @@ class MatrixHtmlParser(
                 appendNodes(el.childNodes(), ctx.copy(outputOffset = ctx.outputOffset + this@appendCodeBlock.length), resultMeta)
             }
             if (resultMeta.expandableItems.size != expandableItemCount ||
-                content.getStringAnnotations(0, content.length).any { it.tag != MatrixBodyAnnotations.SPAN }
+                content.getStringAnnotations(0, content.length).any {
+                    it.tag != MatrixBodyAnnotations.SPAN || Json.decodeFromString<SpanAttributes>(it.item).bgColor != null
+                }
             ) {
                 append(content)
                 return@withAnnotation

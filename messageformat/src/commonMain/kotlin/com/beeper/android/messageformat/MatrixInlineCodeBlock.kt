@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
+import kotlin.math.ceil
 
 private class MeasuredCodeBlock(
     val id: String,
@@ -71,7 +73,8 @@ fun Map<String, InlineCodeBlockInfo>.toCodeBlockInlineContent(
                             Modifier
                                 .fillMaxSize()
                                 .clearAndSetSemantics {}
-                                .horizontalScroll(scrollState, overscrollEffect = null)
+                                .horizontalScroll(scrollState, overscrollEffect = null),
+                            contentAlignment = Alignment.CenterStart,
                         ) {
                             Text(
                                 text = text.codeLine(line),
@@ -120,13 +123,16 @@ private fun Map<String, InlineCodeBlockInfo>.measureCodeBlocks(
             return@mapNotNull null
         }
         val blockText = text.subSequence(block.start, block.end).let { AnnotatedString(it.text, it.spanStyles) }
+        val blockLayout = textMeasurer.measure(blockText, style, softWrap = false, density = density)
         MeasuredCodeBlock(
             id = block.item,
             start = block.start,
             end = block.end,
             lines = lines,
-            contentWidth = textMeasurer.measure(blockText, style, softWrap = false, density = density).size.width,
-            lineHeight = textMeasurer.measure(text.codeLine(lines.first()), style, softWrap = false, maxLines = 1, density = density).size.height,
+            contentWidth = blockLayout.size.width,
+            lineHeight = (0 until blockLayout.lineCount).maxOf {
+                ceil(blockLayout.getLineBottom(it) - blockLayout.getLineTop(it)).toInt()
+            },
         )
     }
 }
