@@ -54,6 +54,7 @@ class InlineCodeBlockLayout internal constructor(
     internal val style: TextStyle,
     internal val density: Density,
     private val blocks: List<MeasuredCodeBlock>,
+    private val ellipsisWidth: Float,
 ) {
     /**
      * Placeholders for the lines of all code blocks that don't fit into [maxWidth] and thus need to scroll.
@@ -71,7 +72,7 @@ class InlineCodeBlockLayout internal constructor(
             if (block.contentWidth <= availableWidth - block.indention) {
                 return@mapNotNull null
             }
-            val viewportWidth = availableWidth - block.indention - block.ellipsisWidth
+            val viewportWidth = availableWidth - block.indention - ellipsisWidth
             block to Placeholder(
                 width = viewportWidth.coerceAtLeast(0f).toSp(),
                 height = block.lineHeight.toSp(),
@@ -87,7 +88,6 @@ internal class MeasuredCodeBlock(
     val contentWidth: Int,
     val lineHeight: Int,
     val indention: Float,
-    val ellipsisWidth: Float,
 )
 
 /**
@@ -101,10 +101,11 @@ fun Map<String, InlineCodeBlockInfo>.rememberInlineCodeBlockLayout(
 ): InlineCodeBlockLayout {
     val density = LocalDensity.current
     if (isEmpty()) {
-        return remember(text, style, density) { InlineCodeBlockLayout(text, style, density, emptyList()) }
+        return remember(text, style, density) { InlineCodeBlockLayout(text, style, density, emptyList(), 0f) }
     }
     val textMeasurer = rememberTextMeasurer()
     return remember(this, text, style, density, textMeasurer) {
+        val ellipsisWidth = textMeasurer.measure(ELLIPSIS, style, density = density).size.width.toFloat()
         val blocks = values.mapNotNull { info ->
             val lineIds = info.lines.toSet()
             val lines = text.getStringAnnotations(MatrixBodyAnnotations.BLOCK_CODE_LINE, 0, text.length)
@@ -120,9 +121,6 @@ fun Map<String, InlineCodeBlockInfo>.rememberInlineCodeBlockLayout(
                 softWrap = false,
                 density = density,
             )
-            val ellipsis = text.withoutParagraphStyles(end, end + 1).let {
-                AnnotatedString(ELLIPSIS, it.spanStyles)
-            }
             MeasuredCodeBlock(
                 id = lines.first().item,
                 lines = lines,
@@ -131,10 +129,9 @@ fun Map<String, InlineCodeBlockInfo>.rememberInlineCodeBlockLayout(
                     ceil(blockLayout.getLineBottom(it) - blockLayout.getLineTop(it)).toInt()
                 },
                 indention = text.indentionFor(start, end, style, density),
-                ellipsisWidth = textMeasurer.measure(ellipsis, style, density = density).size.width.toFloat(),
             )
         }
-        InlineCodeBlockLayout(text, style, density, blocks)
+        InlineCodeBlockLayout(text, style, density, blocks, ellipsisWidth)
     }
 }
 
