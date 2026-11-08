@@ -6,12 +6,14 @@ import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.horizontalDrag
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -34,6 +36,7 @@ import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -61,29 +64,49 @@ class InlineCodeBlockLayout internal constructor(
      * Code blocks that fit keep rendering as plain text.
      */
     fun placeholders(maxWidth: Dp): List<AnnotatedString.Range<Placeholder>> {
-        return scrollingBlocks(maxWidth).flatMap { (block, placeholder) ->
-            block.lines.map { AnnotatedString.Range(placeholder, it.start, it.end) }
+        return scrollingBlocks(maxWidth).flatMap { scrollingBlock ->
+            scrollingBlock.block.lines.flatMap {
+                listOf(
+                    AnnotatedString.Range(scrollingBlock.line, it.start, it.end),
+                    AnnotatedString.Range(scrollingBlock.lineEnd, it.end, it.end + 1),
+                )
+            }
         }
     }
 
-    internal fun scrollingBlocks(maxWidth: Dp): List<Pair<MeasuredCodeBlock, Placeholder>> = with(density) {
+    internal fun scrollingBlocks(maxWidth: Dp): List<ScrollingCodeBlock> = with(density) {
         val availableWidth = maxWidth.toPx() - PLACEHOLDER_WIDTH_EPSILON_SP.sp.toPx()
         blocks.mapNotNull { block ->
             if (block.contentWidth <= availableWidth - block.indention) {
                 return@mapNotNull null
             }
             val viewportWidth = availableWidth - block.indention - ellipsisWidth
-            block to Placeholder(
-                width = viewportWidth.coerceAtLeast(0f).toSp(),
-                height = block.lineHeight.toSp(),
-                placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+            ScrollingCodeBlock(
+                block = block,
+                line = Placeholder(
+                    width = viewportWidth.coerceAtLeast(0f).toSp(),
+                    height = block.lineHeight.toSp(),
+                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+                ),
+                lineEnd = Placeholder(
+                    width = ellipsisWidth.toSp(),
+                    height = block.lineHeight.toSp(),
+                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+                ),
             )
         }
     }
 }
 
+internal class ScrollingCodeBlock(
+    val block: MeasuredCodeBlock,
+    val line: Placeholder,
+    val lineEnd: Placeholder,
+)
+
 internal class MeasuredCodeBlock(
     val id: String,
+    val lineEnd: String,
     val lines: List<AnnotatedString.Range<String>>,
     val contentWidth: Int,
     val lineHeight: Int,
@@ -104,8 +127,9 @@ fun Map<String, InlineCodeBlockInfo>.rememberInlineCodeBlockLayout(
         return remember(text, style, density) { InlineCodeBlockLayout(text, style, density, emptyList(), 0f) }
     }
     val textMeasurer = rememberTextMeasurer()
-    return remember(this, text, style, density, textMeasurer) {
-        val ellipsisWidth = textMeasurer.measure(ELLIPSIS, style, density = density).size.width.toFloat()
+    val mergedStyle = LocalTextStyle.current.merge(style)
+    return remember(this, text, mergedStyle, density, textMeasurer) {
+        val ellipsisWidth = textMeasurer.measure(ELLIPSIS, mergedStyle, density = density).size.width.toFloat()
         val blocks = values.mapNotNull { info ->
             val lineIds = info.lines.toSet()
             val lines = text.getStringAnnotations(MatrixBodyAnnotations.BLOCK_CODE_LINE, 0, text.length)
@@ -117,21 +141,22 @@ fun Map<String, InlineCodeBlockInfo>.rememberInlineCodeBlockLayout(
             val end = lines.last().end
             val blockLayout = textMeasurer.measure(
                 text.withoutParagraphStyles(start, end),
-                style,
+                mergedStyle,
                 softWrap = false,
                 density = density,
             )
             MeasuredCodeBlock(
                 id = lines.first().item,
+                lineEnd = info.lineEnd,
                 lines = lines,
                 contentWidth = blockLayout.size.width,
                 lineHeight = (0 until blockLayout.lineCount).maxOf {
                     ceil(blockLayout.getLineBottom(it) - blockLayout.getLineTop(it)).toInt()
                 },
-                indention = text.indentionFor(start, end, style, density),
+                indention = text.indentionFor(start, end, mergedStyle, density),
             )
         }
-        InlineCodeBlockLayout(text, style, density, blocks, ellipsisWidth)
+        InlineCodeBlockLayout(text, mergedStyle, density, blocks, ellipsisWidth)
     }
 }
 
@@ -151,11 +176,13 @@ fun InlineCodeBlockLayout.toCodeBlockInlineContent(
     val flingBehavior = ScrollableDefaults.flingBehavior()
     val coroutineScope = rememberCoroutineScope()
     return buildMap {
-        scrollingBlocks.forEach { (block, placeholder) ->
+        scrollingBlocks.forEach { scrollingBlock ->
+            val block = scrollingBlock.block
+            put(block.lineEnd, InlineTextContent(scrollingBlock.lineEnd) {})
             val scrollState = key(block.id) { rememberScrollState() }
             val contentWidth = with(density) { block.contentWidth.toDp() }
             block.lines.forEach { line ->
-                put(line.item, InlineTextContent(placeholder) {
+                put(line.item, InlineTextContent(scrollingBlock.line) {
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                         Box(
                             Modifier
@@ -169,6 +196,7 @@ fun InlineCodeBlockLayout.toCodeBlockInlineContent(
                                 modifier = Modifier.width(contentWidth),
                                 style = style,
                                 color = textColor,
+                                textAlign = TextAlign.Left,
                                 softWrap = false,
                                 maxLines = 1,
                             )
@@ -191,6 +219,9 @@ private fun Modifier.codeBlockScroll(
 ) = pointerInput(state, flingBehavior) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
+        if (state.isScrollInProgress) {
+            coroutineScope.launch { state.stopScroll() }
+        }
         val velocityTracker = VelocityTracker()
         velocityTracker.addPointerInputChange(down)
         var totalDrag = Offset.Zero
@@ -214,10 +245,13 @@ private fun Modifier.codeBlockScroll(
                 break
             }
         }
-        horizontalDrag(down.id) { change ->
+        val completed = horizontalDrag(down.id) { change ->
             velocityTracker.addPointerInputChange(change)
             state.dispatchRawDelta(-change.positionChange().x)
             change.consume()
+        }
+        if (!completed) {
+            return@awaitEachGesture
         }
         val velocity = -velocityTracker.calculateVelocity().x
         coroutineScope.launch {

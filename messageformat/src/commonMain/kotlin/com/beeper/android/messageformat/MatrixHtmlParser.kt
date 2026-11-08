@@ -400,6 +400,7 @@ class MatrixHtmlParser(
     private fun Element.isScrollableCodeBlock(ctx: RenderContext): Boolean {
         return !newlineDbg &&
             childNodes().all { it is TextNode } &&
+            siblingNodes().all { it is TextNode && it.wholeText.all { char -> char == '\n' } } &&
             ctx.currentAnnotationTags.all { it in SCROLLABLE_CODE_BLOCK_PARENT_TAGS }
     }
 
@@ -410,6 +411,7 @@ class MatrixHtmlParser(
     ) {
         val text = applyTabFormat(el.wholeText().removeSuffix("\n"), ctx)
         val id = "${MatrixBodyAnnotations.INLINE_CODE_BLOCK_PREFIX}${resultMeta.inlineCodeBlocks.size}"
+        val lineEndId = "$id:end"
         val lines = mutableListOf<String>()
         text.split('\n').forEachIndexed { index, line ->
             if (index > 0) {
@@ -421,12 +423,12 @@ class MatrixHtmlParser(
                 withAnnotation(MatrixBodyAnnotations.BLOCK_CODE_LINE, lineId) {
                     appendInlineContent(lineId, line)
                 }
-                append("\u200B")
+                appendInlineContent(lineEndId, "\u200B")
                 lines += lineId
             }
         }
         if (lines.isNotEmpty()) {
-            resultMeta.inlineCodeBlocks[id] = InlineCodeBlockInfo(lines = lines)
+            resultMeta.inlineCodeBlocks[id] = InlineCodeBlockInfo(lines = lines, lineEnd = lineEndId)
         }
     }
 
