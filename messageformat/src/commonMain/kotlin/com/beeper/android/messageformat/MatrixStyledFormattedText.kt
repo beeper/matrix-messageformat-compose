@@ -77,7 +77,7 @@ fun MatrixStyledFormattedText(
     )
     val resolvedTextColor = effectiveStyle.color.takeOrElse { LocalContentColor.current }
     ConditionalBoxWithConstraints(
-        enabled = parseResult.inlineTables.isNotEmpty(),
+        enabled = parseResult.inlineTables.isNotEmpty() || parseResult.inlineCodeBlocks.isNotEmpty(),
         modifier = modifier,
     ) { modifier, maxWidth ->
         val baseInlineContent = inlineContent(parseResult)
@@ -91,6 +91,11 @@ fun MatrixStyledFormattedText(
                 inlineContent = inlineContent,
                 tableHeights = tableHeights,
                 onLinkLongPress = onLinkLongPress,
+            ) + parseResult.inlineCodeBlocks.toCodeBlockInlineContent(
+                text = renderState.text,
+                maxWidth = maxWidth,
+                style = effectiveStyle,
+                textColor = resolvedTextColor,
             )
         } else {
             baseInlineContent

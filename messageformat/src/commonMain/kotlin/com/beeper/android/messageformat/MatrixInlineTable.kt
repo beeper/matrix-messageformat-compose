@@ -99,7 +99,7 @@ fun Map<String, InlineTableInfo>.toTableInlineContent(
 }
 
 private const val MIN_TABLE_WIDTH_SP = 48f
-private const val PLACEHOLDER_WIDTH_EPSILON_SP = 1f
+internal const val PLACEHOLDER_WIDTH_EPSILON_SP = 1f
 
 /**
  * Rough single-line-per-row height estimate, only used until the first real measurement.

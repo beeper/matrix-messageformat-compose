@@ -64,12 +64,14 @@ class MatrixHtmlParser(
     private data class RenderResultMeta(
         val inlineImages: MutableMap<String, InlineImageInfo> = mutableMapOf(),
         val inlineTables: MutableMap<String, InlineTableInfo> = mutableMapOf(),
+        val inlineCodeBlocks: MutableMap<String, InlineCodeBlockInfo> = mutableMapOf(),
         val expandableItems: MutableSet<Int> = mutableSetOf(),
     ) {
         fun toResult(text: AnnotatedString) = MatrixBodyParseResult(
             text = text,
             inlineImages = inlineImages.toPersistentMap(),
             inlineTables = inlineTables.toPersistentMap(),
+            inlineCodeBlocks = inlineCodeBlocks.toPersistentMap(),
             expandableItems = expandableItems.toPersistentSet(),
         )
     }
@@ -395,6 +397,54 @@ class MatrixHtmlParser(
         return resultMeta.toResult(annotatedString)
     }
 
+    private fun Builder.appendCodeBlock(
+        el: Element,
+        ctx: RenderContext,
+        resultMeta: RenderResultMeta,
+    ) {
+        val id = "${MatrixBodyAnnotations.INLINE_CODE_BLOCK_PREFIX}${resultMeta.inlineCodeBlocks.size}"
+        resultMeta.inlineCodeBlocks[id] = InlineCodeBlockInfo(lines = emptyList())
+        withAnnotation(ctx, MatrixBodyAnnotations.BLOCK_CODE, id) { ctx ->
+            val content = buildAnnotatedString {
+                appendNodes(el.childNodes(), ctx, resultMeta)
+            }
+            val lineIds = mutableListOf<String>()
+            var lineStart = 0
+            content.text.split('\n').forEachIndexed { index, line ->
+                if (index > 0) {
+                    append('\n')
+                }
+                if (line.isNotEmpty()) {
+                    val lineId = "$id:$index"
+                    append("\u200B")
+                    withAnnotation(MatrixBodyAnnotations.BLOCK_CODE_LINE, lineId) {
+                        appendInlineContent(lineId, content.subSequence(lineStart, lineStart + line.length), resultMeta)
+                    }
+                    lineIds += lineId
+                }
+                lineStart += line.length + 1
+            }
+            resultMeta.inlineCodeBlocks[id] = InlineCodeBlockInfo(lines = lineIds)
+        }
+    }
+
+    private fun Builder.appendInlineContent(
+        id: String,
+        content: AnnotatedString,
+        resultMeta: RenderResultMeta,
+    ) {
+        val start = length
+        appendInlineContent(id, content.text)
+        content.spanStyles.forEach {
+            addStyle(it.item, start + it.start, start + it.end)
+        }
+        content.getStringAnnotations(0, content.length)
+            .filter { it.item !in resultMeta.inlineImages && it.item !in resultMeta.inlineTables }
+            .forEach {
+                addStringAnnotation(it.tag, it.item, start + it.start, start + it.end)
+            }
+    }
+
     private fun Element.tableRows(): List<Element> {
         return childNodes().flatMap { node ->
             when (node) {
@@ -465,15 +515,14 @@ class MatrixHtmlParser(
                 appendNodes(el.childNodes(), ctx, resultMeta) ?: PreviousRenderedInfo()
             }
             "code" -> {
-                val annotation = if (ctx.preFormattedText) MatrixBodyAnnotations.BLOCK_CODE else MatrixBodyAnnotations.INLINE_CODE
-                val nextPrevRenderInfo = withAnnotation(ctx, annotation, "") { ctx ->
-                    appendNodes(el.childNodes(), ctx, resultMeta) ?: PreviousRenderedInfo()
-                }
                 if (ctx.preFormattedText) {
+                    appendCodeBlock(el, ctx, resultMeta)
                     // Block quote, already handled in paragraph style
                     PreviousRenderedInfo(nextShouldTrimBlank = true)
                 } else {
-                    nextPrevRenderInfo
+                    withAnnotation(ctx, MatrixBodyAnnotations.INLINE_CODE, "") { ctx ->
+                        appendNodes(el.childNodes(), ctx, resultMeta) ?: PreviousRenderedInfo()
+                    }
                 }
             }
             "s", "del" -> withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) {
