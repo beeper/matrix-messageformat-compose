@@ -52,6 +52,7 @@ class MatrixHtmlParser(
         val pendingBlankText: String? = null,
         val indentedBlockDepth: Int = 0,
         val currentAnnotationTags: List<String> = emptyList(),
+        val outputOffset: Int = 0,
     ) {
         val shouldIgnoreWhitespace: Boolean
             get() = !preFormattedText && (unorderedListScope != null || orderedListScope != null)
@@ -405,8 +406,15 @@ class MatrixHtmlParser(
         val id = "${MatrixBodyAnnotations.INLINE_CODE_BLOCK_PREFIX}${resultMeta.inlineCodeBlocks.size}"
         resultMeta.inlineCodeBlocks[id] = InlineCodeBlockInfo(lines = emptyList())
         withAnnotation(ctx, MatrixBodyAnnotations.BLOCK_CODE, id) { ctx ->
+            val expandableItemCount = resultMeta.expandableItems.size
             val content = buildAnnotatedString {
-                appendNodes(el.childNodes(), ctx, resultMeta)
+                appendNodes(el.childNodes(), ctx.copy(outputOffset = ctx.outputOffset + this@appendCodeBlock.length), resultMeta)
+            }
+            if (resultMeta.expandableItems.size != expandableItemCount ||
+                content.getStringAnnotations(0, content.length).any { it.tag != MatrixBodyAnnotations.SPAN }
+            ) {
+                append(content)
+                return@withAnnotation
             }
             val lineIds = mutableListOf<String>()
             var lineStart = 0
@@ -418,7 +426,7 @@ class MatrixHtmlParser(
                     val lineId = "$id:$index"
                     append("\u200B")
                     withAnnotation(MatrixBodyAnnotations.BLOCK_CODE_LINE, lineId) {
-                        appendInlineContent(lineId, content.subSequence(lineStart, lineStart + line.length), resultMeta)
+                        appendInlineContent(lineId, content.subSequence(lineStart, lineStart + line.length))
                     }
                     lineIds += lineId
                 }
@@ -428,21 +436,15 @@ class MatrixHtmlParser(
         }
     }
 
-    private fun Builder.appendInlineContent(
-        id: String,
-        content: AnnotatedString,
-        resultMeta: RenderResultMeta,
-    ) {
+    private fun Builder.appendInlineContent(id: String, content: AnnotatedString) {
         val start = length
         appendInlineContent(id, content.text)
         content.spanStyles.forEach {
             addStyle(it.item, start + it.start, start + it.end)
         }
-        content.getStringAnnotations(0, content.length)
-            .filter { it.item !in resultMeta.inlineImages && it.item !in resultMeta.inlineTables }
-            .forEach {
-                addStringAnnotation(it.tag, it.item, start + it.start, start + it.end)
-            }
+        content.getStringAnnotations(0, content.length).forEach {
+            addStringAnnotation(it.tag, it.item, start + it.start, start + it.end)
+        }
     }
 
     private fun Element.tableRows(): List<Element> {
@@ -540,7 +542,7 @@ class MatrixHtmlParser(
                     fgColor = el.attr("data-mx-color").tryParseHexColor() ?: el.attr("color").tryParseHexColor(),
                     bgColor = el.attr("data-mx-bg-color").tryParseHexColor(),
                     isSpoiler = el.hasAttr("data-mx-spoiler"),
-                    revealId = length,
+                    revealId = ctx.outputOffset + length,
                 )
                 if (attributes.isSpoiler) {
                     resultMeta.expandableItems.add(attributes.revealId)
@@ -804,7 +806,7 @@ class MatrixHtmlParser(
                         // Nothing to expand found, treat as normal content
                         appendNodes(childNodes, ctx, resultMeta, previousRenderedInfo)
                     } else {
-                        val revealId = length
+                        val revealId = ctx.outputOffset + length
                         resultMeta.expandableItems.add(revealId)
                         var innerPrevRenderInfo: PreviousRenderedInfo? = previousRenderedInfo
                         if (preSummary.isNotEmpty()) {
