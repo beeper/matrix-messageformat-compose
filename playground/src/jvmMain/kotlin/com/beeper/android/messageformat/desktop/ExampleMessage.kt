@@ -27,6 +27,32 @@ dendri	380	365	-15	-3.95%
 <pre><code>synapse	11679	11894	215	1.84%</code></pre>
 <pre><code>c10y	450	546	96	21.33%</code></pre>
 
+<p>Text before a monospace table sent by a bot, which should scroll sideways instead of wrapping on narrow screens:</p>
+<pre><code>| ID | Temp | Hum | Low  | High |  Diff |
+|----|------|-----|------|------|-------|
+| A1 | 21.4 |  48 | 19.9 | 22.6 |  +1.2 |
+| B2 | 17.8 |  61 | 16.2 | 18.9 |  -0.7 |
+| C3 | 24.0 |  35 | 22.1 | 25.3 |  +2.8 |</code></pre>
+<p>Text after the table.</p>
+<pre><code>a_single_very_long_line_of_code_without_any_spaces_that_can_never_fit_on_a_phone_screen();</code></pre>
+<pre><code>short code</code></pre>
+<blockquote>
+  <p>Quoted code block:</p>
+  <pre><code>quoted code that is long enough to need horizontal scrolling on narrow screens
+second line</code></pre>
+  <blockquote>
+    <pre><code>nested quoted code that is long enough to need horizontal scrolling too</code></pre>
+  </blockquote>
+</blockquote>
+<ul>
+  <li><pre><code>code directly in a list item that is long enough to need horizontal scrolling
+and a second line</code></pre></li>
+  <li>Text before code<pre><code>short listed code</code></pre>and after</li>
+</ul>
+<ol start="9999">
+  <li><pre><code>code in an ordered list item with a wide number that needs horizontal scrolling</code></pre></li>
+</ol>
+
 <p>
 @room hey <a href="https://matrix.to/#/@spiritcroc:matrix.org">Mention</a>, check out this <a href='https://matrix.org'>link</a>
 <br>
