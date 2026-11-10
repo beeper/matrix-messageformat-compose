@@ -504,7 +504,7 @@ class MatrixHtmlParser(
             "code" -> {
                 val annotation = if (ctx.preFormattedText) MatrixBodyAnnotations.BLOCK_CODE else MatrixBodyAnnotations.INLINE_CODE
                 val nextPrevRenderInfo = withAnnotation(ctx, annotation, "") { ctx ->
-                    if (ctx.preFormattedText && el.isScrollableCodeBlock(ctx)) {
+                    if (ctx.style.scrollCodeBlocks && ctx.preFormattedText && el.isScrollableCodeBlock(ctx)) {
                         appendScrollableCodeBlock(el, ctx, resultMeta)
                         PreviousRenderedInfo()
                     } else {

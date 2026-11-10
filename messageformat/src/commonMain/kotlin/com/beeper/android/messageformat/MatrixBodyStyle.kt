@@ -46,6 +46,8 @@ data class MatrixBodyPreFormatStyle(
     val isValidInlineImageUri: (String) -> Boolean = MatrixPatterns::isValidMatrixUri,
     /** Set to true if your client supports MSC4144. */
     val stripPerMessageProfileFallback: Boolean = false,
+    /** Render eligible code blocks with horizontal scrolling instead of wrapping. */
+    val scrollCodeBlocks: Boolean = false,
 )
 
 /**
