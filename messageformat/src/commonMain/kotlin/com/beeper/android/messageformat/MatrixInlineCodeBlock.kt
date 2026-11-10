@@ -22,8 +22,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
@@ -41,6 +46,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -188,6 +194,7 @@ fun InlineCodeBlockLayout.toCodeBlockInlineContent(
                             Modifier
                                 .fillMaxSize()
                                 .clearAndSetSemantics {}
+                                .codeBlockEdgeFade(scrollState)
                                 .codeBlockScroll(scrollState, flingBehavior, coroutineScope),
                             contentAlignment = Alignment.CenterStart,
                         ) {
@@ -207,6 +214,28 @@ fun InlineCodeBlockLayout.toCodeBlockInlineContent(
         }
     }
 }
+
+private fun Modifier.codeBlockEdgeFade(state: ScrollState) =
+    graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            val fadeLeft = state.canScrollBackward
+            val fadeRight = state.canScrollForward
+            if (size.width > 0f && (fadeLeft || fadeRight)) {
+                val fadeFraction = (24.dp.toPx() / size.width).coerceAtMost(0.5f)
+                drawRect(
+                    brush = Brush.horizontalGradient(
+                        0f to if (fadeLeft) Color.Transparent else Color.Black,
+                        fadeFraction to Color.Black,
+                        1f - fadeFraction to Color.Black,
+                        1f to if (fadeRight) Color.Transparent else Color.Black,
+                        startX = 0f,
+                        endX = size.width,
+                    ),
+                    blendMode = BlendMode.DstIn,
+                )
+            }
+        }
 
 /**
  * Like [horizontalScroll], but leaves drags towards an edge the content is already scrolled to
