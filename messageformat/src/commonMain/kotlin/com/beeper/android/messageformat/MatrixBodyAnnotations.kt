@@ -21,6 +21,7 @@ object MatrixBodyAnnotations {
     const val ORDERED_LIST_ITEM = "mx:ORDERED_LIST_ITEM"
     const val INLINE_CODE = "mx:INLINE_CODE"
     const val BLOCK_CODE = "mx:BLOCK_CODE"
+    const val BLOCK_CODE_LINE = "mx:BLOCK_CODE_LINE"
     const val SPAN = "mx:SPAN"
     const val DETAILS_SUMMARY = "mx:DETAILS_SUMMARY"
     const val DETAILS_CONTENT = "mx:DETAILS_CONTENT"
@@ -29,6 +30,7 @@ object MatrixBodyAnnotations {
     const val INLINE_IMAGE = "mx:IMG"
     const val INLINE_IMAGE_PREFIX = "mx:IMG:"
     const val INLINE_TABLE_PREFIX = "mx:TABLE:"
+    const val INLINE_CODE_BLOCK_PREFIX = "mx:CODE:"
     const val CLICK_TO_REVEAL = "mx:CLICK_TO_REVEAL"
     /** Markup characters of a formatting syntax, e.g. markdown delimiters, when the source is shown unrendered. */
     const val SYNTAX_MARKER = "mx:SYNTAX_MARKER"

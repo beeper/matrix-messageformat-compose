@@ -64,12 +64,14 @@ class MatrixHtmlParser(
     private data class RenderResultMeta(
         val inlineImages: MutableMap<String, InlineImageInfo> = mutableMapOf(),
         val inlineTables: MutableMap<String, InlineTableInfo> = mutableMapOf(),
+        val inlineCodeBlocks: MutableMap<String, InlineCodeBlockInfo> = mutableMapOf(),
         val expandableItems: MutableSet<Int> = mutableSetOf(),
     ) {
         fun toResult(text: AnnotatedString) = MatrixBodyParseResult(
             text = text,
             inlineImages = inlineImages.toPersistentMap(),
             inlineTables = inlineTables.toPersistentMap(),
+            inlineCodeBlocks = inlineCodeBlocks.toPersistentMap(),
             expandableItems = expandableItems.toPersistentSet(),
         )
     }
@@ -395,6 +397,41 @@ class MatrixHtmlParser(
         return resultMeta.toResult(annotatedString)
     }
 
+    private fun Element.isScrollableCodeBlock(ctx: RenderContext): Boolean {
+        return !newlineDbg &&
+            childNodes().all { it is TextNode } &&
+            siblingNodes().all { it is TextNode && it.wholeText.all { char -> char == '\n' } } &&
+            ctx.currentAnnotationTags.all { it in SCROLLABLE_CODE_BLOCK_PARENT_TAGS }
+    }
+
+    private fun Builder.appendScrollableCodeBlock(
+        el: Element,
+        ctx: RenderContext,
+        resultMeta: RenderResultMeta,
+    ) {
+        val text = applyTabFormat(el.wholeText().removeSuffix("\n"), ctx)
+        val id = "${MatrixBodyAnnotations.INLINE_CODE_BLOCK_PREFIX}${resultMeta.inlineCodeBlocks.size}"
+        val lineEndId = "$id:end"
+        val lines = mutableListOf<String>()
+        text.split('\n').forEachIndexed { index, line ->
+            if (index > 0) {
+                append('\n')
+            }
+            if (line.isNotEmpty()) {
+                val lineId = "$id:$index"
+                append("\u200B")
+                withAnnotation(MatrixBodyAnnotations.BLOCK_CODE_LINE, lineId) {
+                    appendInlineContent(lineId, line)
+                }
+                appendInlineContent(lineEndId, "\u200B")
+                lines += lineId
+            }
+        }
+        if (lines.isNotEmpty()) {
+            resultMeta.inlineCodeBlocks[id] = InlineCodeBlockInfo(lines = lines, lineEnd = lineEndId)
+        }
+    }
+
     private fun Element.tableRows(): List<Element> {
         return childNodes().flatMap { node ->
             when (node) {
@@ -467,7 +504,12 @@ class MatrixHtmlParser(
             "code" -> {
                 val annotation = if (ctx.preFormattedText) MatrixBodyAnnotations.BLOCK_CODE else MatrixBodyAnnotations.INLINE_CODE
                 val nextPrevRenderInfo = withAnnotation(ctx, annotation, "") { ctx ->
-                    appendNodes(el.childNodes(), ctx, resultMeta) ?: PreviousRenderedInfo()
+                    if (ctx.style.scrollCodeBlocks && ctx.preFormattedText && el.isScrollableCodeBlock(ctx)) {
+                        appendScrollableCodeBlock(el, ctx, resultMeta)
+                        PreviousRenderedInfo()
+                    } else {
+                        appendNodes(el.childNodes(), ctx, resultMeta) ?: PreviousRenderedInfo()
+                    }
                 }
                 if (ctx.preFormattedText) {
                     // Block quote, already handled in paragraph style
@@ -888,6 +930,16 @@ class MatrixHtmlParser(
         block(ctx.copy(currentAnnotationTags = ctx.currentAnnotationTags + tag))
     }
 }
+
+private val SCROLLABLE_CODE_BLOCK_PARENT_TAGS = setOf(
+    MatrixBodyAnnotations.BLOCK_CODE,
+    MatrixBodyAnnotations.BLOCK_QUOTE,
+    MatrixBodyAnnotations.UNORDERED_LIST,
+    MatrixBodyAnnotations.UNORDERED_LIST_ITEM,
+    MatrixBodyAnnotations.ORDERED_LIST,
+    MatrixBodyAnnotations.ORDERED_LIST_ITEM,
+    MatrixBodyAnnotations.DETAILS_CONTENT,
+)
 
 private fun Element.getIntAttrOrNull(attributeKey: String) = attr(attributeKey).takeIf(String::isNotEmpty)?.toIntOrNull()
 

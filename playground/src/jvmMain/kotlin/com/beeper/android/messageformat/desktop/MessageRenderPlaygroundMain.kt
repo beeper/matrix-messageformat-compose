@@ -86,6 +86,7 @@ fun TextRenderScreen() {
     var strippedParseResult by remember { mutableStateOf(MatrixBodyParseResult("")) }
     var allowRoomMention by remember { mutableStateOf(true) }
     var newlineDbg by remember { mutableStateOf(false) }
+    var scrollCodeBlocks by remember { mutableStateOf(false) }
     var wrapWidth by remember { mutableStateOf(false) }
     var forceWrapWidth by remember { mutableStateOf(false) }
     var inverseLayout by remember { mutableStateOf(false) }
@@ -129,8 +130,9 @@ fun TextRenderScreen() {
                     LocalLayoutDirection.current
                 }
             ) {
-                val preFormatStyle = remember {
+                val preFormatStyle = remember(scrollCodeBlocks) {
                     MatrixBodyPreFormatStyle(
+                        scrollCodeBlocks = scrollCodeBlocks,
                         // For some reason, having anything that's not exactly one character long here, breaks our annotation finding logic on text layout
                         // for JVM targets.
                         formatInlineImageFallback = { "\uFFFD" },
@@ -329,6 +331,7 @@ fun TextRenderScreen() {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 ToggleRow("Allow room mentions", allowRoomMention) { allowRoomMention = it }
                 ToggleRow("Debug newlines", newlineDbg) { newlineDbg = it }
+                ToggleRow("Scroll code blocks", scrollCodeBlocks) { scrollCodeBlocks = it }
                 ToggleRow("Wrap width", wrapWidth) { wrapWidth = it }
                 ToggleRow("Force layout wrap width", forceWrapWidth) { forceWrapWidth = it }
                 ToggleRow("Inverse layout", inverseLayout) { inverseLayout = it }
