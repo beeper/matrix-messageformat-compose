@@ -44,6 +44,8 @@ sealed interface MatrixInlineEntity {
         val shortcode: String,
         val mxcUrl: String,
         val packId: String? = null,
+        /** The emote's description from its image pack, sent as the image's alt text. */
+        val body: String? = null,
     ) : MatrixInlineEntity {
         override fun moved(start: Int, end: Int) = copy(start = start, end = end)
     }

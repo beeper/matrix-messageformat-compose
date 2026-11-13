@@ -22,7 +22,8 @@ internal fun MatrixInlineEntity.toHtml(visibleText: String): String = when (this
         "<a href=\"$href\">${escapeHtml(sentText(visibleText))}</a>"
     }
     is MatrixInlineEntity.RoomMention -> escapeHtml(sentText(visibleText))
-    is MatrixInlineEntity.CustomEmote -> customEmoteHtml(mxcUrl, shortcode, alt = visibleText)
+    is MatrixInlineEntity.CustomEmote ->
+        customEmoteHtml(mxcUrl, shortcode, alt = body?.takeIf { it.isNotBlank() } ?: visibleText)
 }
 
 /** The `<img>` the Matrix spec defines for custom emotes. */
