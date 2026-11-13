@@ -105,6 +105,18 @@ class MatrixMarkdownParserTest {
     }
 
     @Test
+    fun imageAttributesAreEscapedOnce() {
+        assertEquals(
+            "<img src=\"mxc://a/b\" alt=\"a &amp; b\" title=\"c &amp; d\">",
+            html("![a & b](mxc://a/b \"c & d\")"),
+        )
+        assertEquals(
+            "<img src=\"mxc://a/b?c&amp;d\" alt=\"a &amp; b\" title=\"x\" data-mx-emoticon height=\"32\">",
+            html("![:x:](mxc://a/b?c&d \"Emoji: a & b\")"),
+        )
+    }
+
+    @Test
     fun horizontalRules() {
         assertEquals("<p>a</p><hr><p>b</p>", html("a\n\n---\n\nb"))
         assertEquals("<p>title</p><hr>", html("title\n---"))
@@ -114,6 +126,7 @@ class MatrixMarkdownParserTest {
     @Test
     fun escapedPipesAreLiteral() {
         assertEquals("a ||test||", html("a \\||test||"))
+        assertEquals("a \\<span data-mx-spoiler>test</span>", html("a \\\\||test||"))
     }
 
     @Test

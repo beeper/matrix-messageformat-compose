@@ -51,6 +51,42 @@ class MatrixInlineEntityTest {
     }
 
     @Test
+    fun codeCarriesTheSentTextOfEntities() {
+        val text = "`@Al` and\n```\n@Al <b>\n```\n`@everyone`"
+        val entities = listOf(
+            MatrixInlineEntity.UserMention(1, 4, "@alice:example.org", contentText = "@Alice & co"),
+            MatrixInlineEntity.UserMention(14, 17, "@alice:example.org", contentText = "@Alice & co"),
+            MatrixInlineEntity.RoomMention(27, 36),
+        )
+        assertEquals(
+            "<p><code>@Alice &amp; co</code> and</p><pre><code>@Alice &amp; co &lt;b&gt;\n</code></pre>" +
+                "<p><code>@room</code></p>",
+            parser.toHtml(text, entities),
+        )
+    }
+
+    @Test
+    fun attributesCarryTheSentTextOfEntities() {
+        val bob = { start: Int, end: Int -> MatrixInlineEntity.UserMention(start, end, "@bob:x", contentText = "@Bob & co") }
+        assertEquals(
+            "<span data-mx-spoiler=\"hi @Bob &amp; co\">secret</span>",
+            parser.toHtml("||hi @B|secret||", listOf(bob(5, 7))),
+        )
+        assertEquals(
+            "<img src=\"mxc://a/b\" alt=\"@Bob &amp; co\" title=\"@Bob &amp; co\">",
+            parser.toHtml("![@B](mxc://a/b \"@B\")", listOf(bob(2, 4), bob(17, 19))),
+        )
+        assertEquals(
+            "<img src=\"mxc://a/b\" alt=\"@Bob &amp; co\" title=\"@Bob &amp; co\" data-mx-emoticon height=\"32\">",
+            parser.toHtml("![@B](mxc://a/b \"Emoji: \")", listOf(bob(2, 4))),
+        )
+        assertEquals(
+            "<a href=\"https://e.org\" title=\"@Bob &amp; co\">l</a>",
+            parser.toHtml("[l](https://e.org \"@B\")", listOf(bob(19, 21))),
+        )
+    }
+
+    @Test
     fun contentTextOverridesLinkText() {
         val mention = MatrixInlineEntity.UserMention(0, 6, "@alice:example.org", contentText = "Alice Liddell")
         val html = parser.toHtml("@Alice", listOf(mention))

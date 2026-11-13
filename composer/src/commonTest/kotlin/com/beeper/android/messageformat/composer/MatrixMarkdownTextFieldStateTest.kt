@@ -125,6 +125,22 @@ class MatrixMarkdownTextFieldStateTest {
     }
 
     @Test
+    fun insertEntityOverACutPillLandsWhereThePillWas() {
+        val state = state()
+        val emote = { start: Int, end: Int -> MatrixInlineEntity.CustomEmote(start, end, "cat", "mxc://x/cat") }
+        state.insertEntity(TextRange(5, 12), ":cat:", emote)
+        state.assertState("hi :cat: ere", emote(3, 8))
+        assertEquals(TextRange(9), state.textFieldState.selection)
+    }
+
+    @Test
+    fun insertEntityInsideAPillGoesNextToIt() {
+        val state = state()
+        state.insertEntity(TextRange(5), "@Bob") { start, end -> MatrixInlineEntity.UserMention(start, end, "@bob:x") }
+        state.assertState("hi @Bob @Alice there", MatrixInlineEntity.UserMention(3, 7, "@bob:x"), alice(8, 14))
+    }
+
+    @Test
     fun setContentReplacesTextEntitiesAndSelection() {
         val state = state()
         state.setContent("yo @Bob", listOf(MatrixInlineEntity.UserMention(3, 7, "@bob:example.org")), TextRange(1))

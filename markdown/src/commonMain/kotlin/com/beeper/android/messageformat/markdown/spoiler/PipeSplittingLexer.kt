@@ -59,8 +59,13 @@ internal class PipeSplittingLexer(private val delegate: GeneratedLexer) : Genera
     }
 
     // A backslash-escaped pipe is literal text, as CommonMark escapes any punctuation
-    private fun isDelimiterPipe(index: Int): Boolean =
-        buffer[index] == PIPE && (index == 0 || buffer[index - 1] != '\\')
+    private fun isDelimiterPipe(index: Int): Boolean = buffer[index] == PIPE && precedingBackslashes(index) % 2 == 0
+
+    private fun precedingBackslashes(index: Int): Int {
+        var count = 0
+        while (index - count > 0 && buffer[index - count - 1] == '\\') count++
+        return count
+    }
 
     private companion object {
         const val PIPE = '|'

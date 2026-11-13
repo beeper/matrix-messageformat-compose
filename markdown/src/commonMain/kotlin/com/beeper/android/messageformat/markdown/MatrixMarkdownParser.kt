@@ -33,7 +33,9 @@ class MatrixMarkdownParser(features: Set<MarkdownFeature>) {
             return generator.generateHtml().unwrapSingleParagraph()
         }
         val masking = EntityMasking.mask(markdown, valid)
-        val providers = MatrixHtmlProviders.create(flavour.features, unmaskedText = markdown)
+        val providers = MatrixHtmlProviders.create(flavour.features) { html ->
+            masking.unmask(html) { entity -> escapeHtml(entity.sentText(markdown.substring(entity.start, entity.end))) }
+        }
         return HtmlGenerator(masking.text, parse(masking.text), providers)
             .generateHtml(MatrixInlineEntityTagRenderer(markdown, masking))
             .unwrapSingleParagraph()

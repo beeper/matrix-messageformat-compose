@@ -23,12 +23,16 @@ internal fun MatrixInlineEntity.toHtml(visibleText: String): String = when (this
     }
     is MatrixInlineEntity.RoomMention -> escapeHtml(sentText(visibleText))
     is MatrixInlineEntity.CustomEmote ->
-        customEmoteHtml(mxcUrl, shortcode, alt = body?.takeIf { it.isNotBlank() } ?: shortcode)
+        customEmoteHtml(escapeHtml(mxcUrl), escapeHtml(shortcode), body?.let(::escapeHtml))
 }
 
-/** The `<img>` the Matrix spec defines for custom emotes. */
-internal fun customEmoteHtml(mxcUrl: CharSequence, shortcode: CharSequence, alt: CharSequence): String =
-    "<img src=\"${escapeHtml(mxcUrl)}\" alt=\"${escapeHtml(alt)}\" title=\"${escapeHtml(shortcode)}\"" +
-        " data-mx-emoticon height=\"$CUSTOM_EMOTE_HEIGHT\">"
+/**
+ * The `<img>` the Matrix spec defines for custom emotes, from already HTML-escaped values. The alt text is
+ * [body], or [shortcode] when there is none.
+ */
+internal fun customEmoteHtml(mxcUrl: CharSequence, shortcode: CharSequence, body: CharSequence?): String {
+    val alt = body?.takeIf { it.isNotBlank() } ?: shortcode
+    return "<img src=\"$mxcUrl\" alt=\"$alt\" title=\"$shortcode\" data-mx-emoticon height=\"$CUSTOM_EMOTE_HEIGHT\">"
+}
 
 private const val CUSTOM_EMOTE_HEIGHT = 32

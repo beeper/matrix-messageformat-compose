@@ -54,12 +54,19 @@ class MatrixMarkdownTextFieldState(
         entity: (start: Int, end: Int) -> MatrixInlineEntity,
     ) {
         textFieldState.edit {
-            replace(replaced.min, replaced.max, "$visibleText ")
-            val end = replaced.min + visibleText.length
-            entities = (reconcile(entities) + entity(replaced.min, end))
-                .sortedBy { it.start }
+            replace(replaced.min, replaced.max, "")
+            selection = TextRange(replaced.min)
+            // Reconciling may remove leftovers of cut entities, which moves the cursor to where the entity goes
+            val kept = reconcile(entities)
+            val start = selection.start
+            val inserted = "$visibleText "
+            replace(start, start, inserted)
+            val shifted = kept.map {
+                if (it.start >= start) it.moved(it.start + inserted.length, it.end + inserted.length) else it
+            }
+            entities = (shifted + entity(start, start + visibleText.length)).sortedBy { it.start }
             applyFormatting()
-            selection = TextRange(end + 1)
+            selection = TextRange(start + inserted.length)
         }
     }
 

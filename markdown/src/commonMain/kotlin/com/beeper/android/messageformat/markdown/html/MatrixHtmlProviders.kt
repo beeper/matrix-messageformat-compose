@@ -28,7 +28,7 @@ internal object MatrixHtmlProviders {
 
     fun create(
         features: Set<MarkdownFeature>,
-        unmaskedText: String? = null,
+        sentEntityText: (CharSequence) -> CharSequence = { it },
     ): Map<IElementType, GeneratingProvider> = buildMap {
         val blockQuotes = MarkdownFeature.BLOCKQUOTE in features
         val inline = InlineRenderer(blockQuoteMarkersAreSyntax = blockQuotes)
@@ -41,18 +41,18 @@ internal object MatrixHtmlProviders {
         put(MarkdownElementTypes.EMPH, inline.tagOrLiteral("em", italic, markerTokens = 1))
         put(MarkdownElementTypes.STRONG, inline.tagOrLiteral("strong", bold, markerTokens = 2))
         put(GFMElementTypes.STRIKETHROUGH, InlineTagProvider(inline, "del", markerTokens = 2))
-        put(MatrixMarkdownElementTypes.SPOILER, SpoilerProvider(inline))
-        put(MarkdownElementTypes.CODE_SPAN, CodeSpanProvider(unmaskedText))
-        put(MarkdownElementTypes.CODE_FENCE, CodeFenceProvider(unmaskedText))
+        put(MatrixMarkdownElementTypes.SPOILER, SpoilerProvider(inline, sentEntityText))
+        put(MarkdownElementTypes.CODE_SPAN, CodeSpanProvider(sentEntityText))
+        put(MarkdownElementTypes.CODE_FENCE, CodeFenceProvider(sentEntityText))
         put(MarkdownElementTypes.BLOCK_QUOTE, SimpleTagProvider("blockquote"))
         put(MarkdownElementTypes.UNORDERED_LIST, SimpleTagProvider("ul"))
         put(MarkdownElementTypes.ORDERED_LIST, OrderedListProvider)
         put(MarkdownElementTypes.LIST_ITEM, ListItemProvider(inline))
         put(MarkdownTokenTypes.ATX_CONTENT, InlineTagProvider(inline, tagName = null))
         HEADINGS.forEachIndexed { index, type -> put(type, SimpleTagProvider("h${index + 1}")) }
-        put(MarkdownElementTypes.INLINE_LINK, InlineLinkProvider(inline))
+        put(MarkdownElementTypes.INLINE_LINK, InlineLinkProvider(inline, sentEntityText))
         put(MarkdownElementTypes.AUTOLINK, AutolinkProvider)
-        put(MarkdownElementTypes.IMAGE, ImageProvider)
+        put(MarkdownElementTypes.IMAGE, ImageProvider(sentEntityText))
         put(MarkdownTokenTypes.HORIZONTAL_RULE, RawHtmlProvider("<hr>"))
         put(GFMElementTypes.TABLE, TableProvider)
         put(GFMTokenTypes.CELL, InlineTagProvider(inline, tagName = null))
@@ -129,35 +129,37 @@ private object EscapedTextProvider : GeneratingProvider {
     }
 }
 
-private class SpoilerProvider(private val inline: InlineRenderer) : GeneratingProvider {
+private class SpoilerProvider(
+    private val inline: InlineRenderer,
+    private val sentEntityText: (CharSequence) -> CharSequence,
+) : GeneratingProvider {
     override fun processNode(visitor: HtmlGenerator.HtmlGeneratingVisitor, text: String, node: ASTNode) {
         val inner = node.children.subList(2, node.children.size - 2)
         val separator = inner.indexOfFirst { it.type == MatrixMarkdownTokenTypes.PIPE }
         val content = if (separator < 0) inner else inner.subList(separator + 1, inner.size)
         val reason =
             if (separator < 0) "" else text.substring(inner.first().startOffset, inner[separator].startOffset).trim()
-        val attribute = if (reason.isEmpty()) "data-mx-spoiler" else "data-mx-spoiler=\"${escapeHtml(reason)}\""
+        val attribute =
+            if (reason.isEmpty()) "data-mx-spoiler" else "data-mx-spoiler=\"${sentEntityText(escapeHtml(reason))}\""
         visitor.consumeTagOpen(node, "span", attribute)
         inline.render(visitor, content)
         visitor.consumeTagClose("span")
     }
 }
 
-private class CodeSpanProvider(private val unmaskedText: String?) : GeneratingProvider {
+private class CodeSpanProvider(private val sentEntityText: (CharSequence) -> CharSequence) : GeneratingProvider {
     override fun processNode(visitor: HtmlGenerator.HtmlGeneratingVisitor, text: String, node: ASTNode) {
-        val source = unmaskedText ?: text
         val content = node.children.subList(1, node.children.size - 1)
-            .joinToString(separator = "") { HtmlGenerator.leafText(source, it, replaceEscapesAndEntities = false) }
+            .joinToString(separator = "") { HtmlGenerator.leafText(text, it, replaceEscapesAndEntities = false) }
             .trim()
         visitor.consumeTagOpen(node, "code")
-        visitor.consumeHtml(content)
+        visitor.consumeHtml(sentEntityText(content))
         visitor.consumeTagClose("code")
     }
 }
 
-private class CodeFenceProvider(private val unmaskedText: String?) : GeneratingProvider {
+private class CodeFenceProvider(private val sentEntityText: (CharSequence) -> CharSequence) : GeneratingProvider {
     override fun processNode(visitor: HtmlGenerator.HtmlGeneratingVisitor, text: String, node: ASTNode) {
-        val source = unmaskedText ?: text
         val indent = node.getTextInNode(text).commonPrefixWith(" ".repeat(10)).length
         val language = node.findChildOfType(MarkdownTokenTypes.FENCE_LANG)
             ?.let { HtmlGenerator.leafText(text, it).toString().trim().substringBefore(' ') }
@@ -170,8 +172,8 @@ private class CodeFenceProvider(private val unmaskedText: String?) : GeneratingP
         for (child in node.children) {
             when (child.type) {
                 MarkdownTokenTypes.CODE_FENCE_CONTENT -> {
-                    val line = HtmlGenerator.leafText(source, child, replaceEscapesAndEntities = false)
-                    visitor.consumeHtml(HtmlGenerator.trimIndents(line, indent))
+                    val line = HtmlGenerator.leafText(text, child, replaceEscapesAndEntities = false)
+                    visitor.consumeHtml(sentEntityText(HtmlGenerator.trimIndents(line, indent)))
                     openingLineDone = true
                     lastWasContent = true
                 }
@@ -227,7 +229,10 @@ private class ListItemProvider(private val inline: InlineRenderer) : GeneratingP
     }
 }
 
-private class InlineLinkProvider(private val inline: InlineRenderer) : InlineLinkGeneratingProvider(baseURI = null) {
+private class InlineLinkProvider(
+    private val inline: InlineRenderer,
+    private val sentEntityText: (CharSequence) -> CharSequence,
+) : InlineLinkGeneratingProvider(baseURI = null) {
     override fun renderLink(
         visitor: HtmlGenerator.HtmlGeneratingVisitor,
         text: String,
@@ -235,7 +240,8 @@ private class InlineLinkProvider(private val inline: InlineRenderer) : InlineLin
         info: LinkGeneratingProvider.RenderInfo,
     ) {
         val destination = makeXssSafeDestination(makeAbsoluteUrl(info.destination))
-        visitor.consumeTagOpen(node, "a", "href=\"$destination\"", info.title?.let { "title=\"$it\"" })
+        val titleAttribute = info.title?.let { "title=\"${sentEntityText(it)}\"" }
+        visitor.consumeTagOpen(node, "a", "href=\"$destination\"", titleAttribute)
         inline.render(visitor, info.label.children.subList(1, info.label.children.size - 1))
         visitor.consumeTagClose("a")
     }
@@ -297,7 +303,8 @@ private object TableProvider : GeneratingProvider {
     }
 }
 
-private object ImageProvider : GeneratingProvider {
+/** Every value is HTML-escaped exactly once, as the destination and title already are when parsed. */
+private class ImageProvider(private val sentEntityText: (CharSequence) -> CharSequence) : GeneratingProvider {
     override fun processNode(visitor: HtmlGenerator.HtmlGeneratingVisitor, text: String, node: ASTNode) {
         val link = node.findChildOfType(MarkdownElementTypes.INLINE_LINK)
             ?: return visitor.consumeHtml(escapeHtml(node.getTextInNode(text)))
@@ -306,17 +313,18 @@ private object ImageProvider : GeneratingProvider {
         val source = link.findChildOfType(MarkdownElementTypes.LINK_DESTINATION)?.getTextInNode(text)
             ?.let { makeXssSafeDestination(LinkMap.normalizeDestination(it, true)) } ?: ""
         val title = link.findChildOfType(MarkdownElementTypes.LINK_TITLE)?.getTextInNode(text)
-            ?.let { LinkMap.normalizeTitle(it).toString() }
+            ?.let { sentEntityText(LinkMap.normalizeTitle(it)).toString() }
+        val escapedLabel = sentEntityText(escapeHtml(label)).toString()
         if (title != null && title.startsWith(EMOTE_TITLE_PREFIX)) {
             // The mautrix convention for custom emotes in markdown: `![:shortcode:](mxc "Emoji: body")`
-            val body = title.removePrefix(EMOTE_TITLE_PREFIX)
-            val shortcode = label.removeSurrounding(":")
-            val alt = body.takeIf { it.isNotBlank() && it != label } ?: shortcode
-            return visitor.consumeHtml(customEmoteHtml(source, shortcode, alt))
+            val body = title.removePrefix(EMOTE_TITLE_PREFIX).takeIf { it != escapedLabel }
+            return visitor.consumeHtml(customEmoteHtml(source, escapedLabel.removeSurrounding(":"), body))
         }
-        val titleAttribute = title?.let { "title=\"${escapeHtml(it)}\"" }
-        visitor.consumeTagOpen(node, "img", "src=\"$source\"", "alt=\"${escapeHtml(label)}\"", titleAttribute)
+        val titleAttribute = title?.let { "title=\"$it\"" }
+        visitor.consumeTagOpen(node, "img", "src=\"$source\"", "alt=\"$escapedLabel\"", titleAttribute)
     }
 
-    private const val EMOTE_TITLE_PREFIX = "Emoji: "
+    private companion object {
+        const val EMOTE_TITLE_PREFIX = "Emoji: "
+    }
 }
