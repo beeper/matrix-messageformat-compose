@@ -20,7 +20,7 @@ class MatrixInlineEntityTest {
             MatrixInlineEntity.RoomMention(27, 32),
         )
         assertEquals(
-            "hi <a href=\"$alice\">@Alice</a> and <img src=\"mxc://x/cat\" alt=\":catjam:\" title=\"catjam\"" +
+            "hi <a href=\"$alice\">@Alice</a> and <img src=\"mxc://x/cat\" alt=\"catjam\" title=\"catjam\"" +
                 " data-mx-emoticon height=\"32\"> and @room",
             parser.toHtml(text, entities),
         )
