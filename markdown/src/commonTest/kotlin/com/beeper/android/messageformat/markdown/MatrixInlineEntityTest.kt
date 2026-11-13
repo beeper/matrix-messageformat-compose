@@ -58,6 +58,25 @@ class MatrixInlineEntityTest {
     }
 
     @Test
+    fun draftSendsContentTextAndRoomMentionText() {
+        val text = "**@Ali** and @everyone"
+        val entities = listOf(
+            MatrixInlineEntity.UserMention(2, 6, "@alice:example.org", contentText = "@Alice Liddell"),
+            MatrixInlineEntity.RoomMention(13, 22),
+        )
+        val draft = parser.toDraft(text, entities)
+        assertEquals("**@Alice Liddell** and @room", draft.body)
+        assertEquals("<strong><a href=\"$alice\">@Alice Liddell</a></strong> and @room", draft.formattedBody)
+    }
+
+    @Test
+    fun draftWithOnlyRoomMentionStaysPlain() {
+        val draft = parser.toDraft("hey @everyone", listOf(MatrixInlineEntity.RoomMention(4, 13)))
+        assertEquals("hey @room", draft.body)
+        assertEquals(null, draft.formattedBody)
+    }
+
+    @Test
     fun invalidEntitiesAreIgnored() {
         val text = "@Alice"
         val entities = listOf(

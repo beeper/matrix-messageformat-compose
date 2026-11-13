@@ -1,5 +1,6 @@
 package com.beeper.android.messageformat.markdown
 
+import com.beeper.android.messageformat.MENTION_ROOM
 import com.beeper.android.messageformat.MatrixPatterns
 import com.beeper.android.messageformat.MatrixToLink
 
@@ -12,21 +13,29 @@ sealed interface MatrixInlineEntity {
 
     fun moved(start: Int, end: Int): MatrixInlineEntity
 
+    /** The text a sent message carries for this entity, where the composer shows [visibleText]. */
+    fun sentText(visibleText: String): String = visibleText
+
     data class UserMention(
         override val start: Int,
         override val end: Int,
         val userId: String,
-        /** Link text for the formatted body when it should differ from the visible text. */
+        /** Text to send in place of the visible text, e.g. so a local contact rename does not leak into the message. */
         val contentText: String? = null,
     ) : MatrixInlineEntity {
         override fun moved(start: Int, end: Int) = copy(start = start, end = end)
+
+        override fun sentText(visibleText: String): String = contentText ?: visibleText
 
         fun toMatrixToLink(): MatrixToLink.UserMention =
             MatrixToLink.UserMention(userId, MatrixPatterns.MATRIX_TO_LINK_PREFIX + userId, isAutoLink = false)
     }
 
+    /** Always sent as `@room`, the text the Matrix spec uses for room mentions, whatever the composer shows. */
     data class RoomMention(override val start: Int, override val end: Int) : MatrixInlineEntity {
         override fun moved(start: Int, end: Int) = copy(start = start, end = end)
+
+        override fun sentText(visibleText: String): String = MENTION_ROOM
     }
 
     data class CustomEmote(

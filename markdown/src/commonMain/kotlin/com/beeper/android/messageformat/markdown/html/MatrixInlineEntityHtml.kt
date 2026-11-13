@@ -19,9 +19,9 @@ internal class MatrixInlineEntityTagRenderer(
 internal fun MatrixInlineEntity.toHtml(visibleText: String): String = when (this) {
     is MatrixInlineEntity.UserMention -> {
         val href = MatrixPatterns.MATRIX_TO_LINK_PREFIX + escapeHtml(userId)
-        "<a href=\"$href\">${escapeHtml(contentText ?: visibleText)}</a>"
+        "<a href=\"$href\">${escapeHtml(sentText(visibleText))}</a>"
     }
-    is MatrixInlineEntity.RoomMention -> escapeHtml(visibleText)
+    is MatrixInlineEntity.RoomMention -> escapeHtml(sentText(visibleText))
     is MatrixInlineEntity.CustomEmote -> customEmoteHtml(mxcUrl, shortcode, alt = visibleText)
 }
 

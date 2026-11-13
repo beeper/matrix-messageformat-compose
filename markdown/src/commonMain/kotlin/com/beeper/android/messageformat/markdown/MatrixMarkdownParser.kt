@@ -42,9 +42,10 @@ class MatrixMarkdownParser(features: Set<MarkdownFeature>) {
     fun toDraft(markdown: String, entities: List<MatrixInlineEntity> = emptyList()): MatrixFormattedMessageDraft {
         val valid = entities.validIn(markdown)
         val html = toHtml(markdown, valid)
+        val body = sentBody(markdown, valid)
         return MatrixFormattedMessageDraft(
-            body = markdown,
-            formattedBody = html.takeIf { it != escapeHtml(markdown) },
+            body = body,
+            formattedBody = html.takeIf { it != escapeHtml(body) },
             mentionedUserIds = valid.filterIsInstance<MatrixInlineEntity.UserMention>().map { it.userId }.distinct(),
             mentionsRoom = valid.any { it is MatrixInlineEntity.RoomMention },
         )
@@ -89,6 +90,15 @@ class MatrixMarkdownParser(features: Set<MarkdownFeature>) {
             }
         }
         return result.copy(text = text, inlineImages = inlineImages)
+    }
+
+    /** [markdown] with every entity replaced by its [MatrixInlineEntity.sentText], expecting [entities] in text order. */
+    private fun sentBody(markdown: String, entities: List<MatrixInlineEntity>): String {
+        val body = StringBuilder(markdown)
+        for (entity in entities.asReversed()) {
+            body.replace(entity.start, entity.end, entity.sentText(markdown.substring(entity.start, entity.end)))
+        }
+        return body.toString()
     }
 
     private fun String.unwrapSingleParagraph(): String {
