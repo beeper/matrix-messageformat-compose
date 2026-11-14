@@ -172,6 +172,14 @@ internal object EntityReconciler {
         if (!selection.collapsed) return
         val cursor = selection.start
         val inside = entities.firstOrNull { it.start < cursor && cursor < it.end } ?: return
-        selection = TextRange(if (cursor - inside.start < inside.end - cursor) inside.start else inside.end)
+        val from = originalSelection
+        val target = when {
+            // Stepping in from an edge crosses the entity, snapping back would trap arrow keys
+            from.collapsed && from.start == inside.end -> inside.start
+            from.collapsed && from.start == inside.start -> inside.end
+            cursor - inside.start < inside.end - cursor -> inside.start
+            else -> inside.end
+        }
+        selection = TextRange(target)
     }
 }

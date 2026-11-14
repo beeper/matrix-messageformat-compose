@@ -8,6 +8,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import com.beeper.android.messageformat.MatrixToLink
 import com.beeper.android.messageformat.SpanAttributes
+import com.beeper.android.messageformat.markdown.MatrixMarkdownContent
 import com.beeper.android.messageformat.markdown.MatrixMarkdownParser
 import com.beeper.android.messageformat.markdown.MarkdownFeature
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
@@ -39,7 +40,7 @@ class MarkdownSourceFormatterTest {
         text: String,
         style: SpanStyle,
         entities: List<MatrixInlineEntity> = emptyList(),
-    ): List<TextRange> = sourceFormatter.spanStyles(text, entities)
+    ): List<TextRange> = sourceFormatter.spanStyles(MatrixMarkdownContent(text, entities))
         .filter { it.item == style }
         .map { TextRange(it.start, it.end) }
         .sortedBy { it.start }
@@ -65,8 +66,8 @@ class MarkdownSourceFormatterTest {
 
     @Test
     fun reusesTheParseForUnchangedInput() {
-        val first = sourceFormatter.annotate("**a**", emptyList())
-        assertSame(first, sourceFormatter.annotate("**a**", emptyList()))
-        assertNotSame(first, sourceFormatter.annotate("**b**", emptyList()))
+        val first = sourceFormatter.annotate(MatrixMarkdownContent("**a**"))
+        assertSame(first, sourceFormatter.annotate(MatrixMarkdownContent("**a**")))
+        assertNotSame(first, sourceFormatter.annotate(MatrixMarkdownContent("**b**")))
     }
 }

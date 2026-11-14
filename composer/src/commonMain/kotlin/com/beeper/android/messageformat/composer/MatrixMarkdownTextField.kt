@@ -11,7 +11,6 @@ import androidx.compose.foundation.text.input.KeyboardActionHandler
 import androidx.compose.foundation.text.input.TextFieldDecorator
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,11 +66,9 @@ fun MatrixMarkdownTextField(
     val parser = remember(features) { MatrixMarkdownParser(features) }
     val sourceFormatter = remember(parser, formatter) { MarkdownSourceFormatter(parser, formatter) }
 
-    SideEffect { state.reconcileUnobservedEdits() }
-
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
-    val parseResult = sourceFormatter.annotate(state.text.toString(), state.entities)
+    val parseResult = sourceFormatter.annotate(state.content)
     val images = if (inlineContent == null) {
         emptyList()
     } else {
@@ -82,7 +79,7 @@ fun MatrixMarkdownTextField(
     }
     val currentImages by rememberUpdatedState(images)
     val outputTransformation = remember(state, sourceFormatter) {
-        ComposerOutputTransformation(sourceFormatter, { state.entities }) { currentImages }
+        ComposerOutputTransformation(sourceFormatter, state::contentFor) { currentImages }
     }
     val transformedOffsets = remember(images) { TransformedOffsets(images) }
 

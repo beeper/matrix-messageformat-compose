@@ -11,6 +11,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.beeper.android.messageformat.markdown.MarkdownFeature
+import com.beeper.android.messageformat.markdown.MatrixMarkdownContent
 import com.beeper.android.messageformat.markdown.MatrixMarkdownParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,7 +28,7 @@ class ComposerInlineImageTest {
     private val sourceFormatter = MarkdownSourceFormatter(MatrixMarkdownParser(MarkdownFeature.ALL), NoStyleFormatter())
 
     private fun transformation(vararg images: ComposerInlineImage) =
-        ComposerOutputTransformation(sourceFormatter, { emptyList() }) { images.toList() }
+        ComposerOutputTransformation(sourceFormatter, { MatrixMarkdownContent(it.toString()) }) { images.toList() }
 
     @Test
     fun transformationFormatsMarkdownAroundPlaceholders() {

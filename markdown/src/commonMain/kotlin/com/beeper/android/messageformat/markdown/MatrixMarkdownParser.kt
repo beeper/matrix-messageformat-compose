@@ -26,8 +26,12 @@ class MatrixMarkdownParser(features: Set<MarkdownFeature>) {
 
     internal fun parse(markdown: CharSequence): ASTNode = parser.buildMarkdownTreeFromString(markdown)
 
-    fun toHtml(markdown: String, entities: List<MatrixInlineEntity> = emptyList()): String {
-        val valid = entities.validIn(markdown)
+    fun toHtml(markdown: String, entities: List<MatrixInlineEntity> = emptyList()): String =
+        toHtml(MatrixMarkdownContent(markdown, entities))
+
+    fun toHtml(content: MatrixMarkdownContent): String {
+        val markdown = content.text
+        val valid = content.entities
         if (valid.isEmpty()) {
             return HtmlGenerator(markdown, parse(markdown), flavour).generateHtml().unwrapSingleParagraph()
         }
@@ -40,10 +44,13 @@ class MatrixMarkdownParser(features: Set<MarkdownFeature>) {
             .unwrapSingleParagraph()
     }
 
-    fun toDraft(markdown: String, entities: List<MatrixInlineEntity> = emptyList()): MatrixFormattedMessageDraft {
-        val valid = entities.validIn(markdown)
-        val html = toHtml(markdown, valid)
-        val body = sentBody(markdown, valid)
+    fun toDraft(markdown: String, entities: List<MatrixInlineEntity> = emptyList()): MatrixFormattedMessageDraft =
+        toDraft(MatrixMarkdownContent(markdown, entities))
+
+    fun toDraft(content: MatrixMarkdownContent): MatrixFormattedMessageDraft {
+        val valid = content.entities
+        val html = toHtml(content)
+        val body = sentBody(content.text, valid)
         return MatrixFormattedMessageDraft(
             body = body,
             formattedBody = html.takeIf { it != escapeHtml(body) },
@@ -53,8 +60,13 @@ class MatrixMarkdownParser(features: Set<MarkdownFeature>) {
     }
 
     /** Formats the markdown source itself, keeping every character in place. */
-    fun annotateSource(markdown: String, entities: List<MatrixInlineEntity> = emptyList()): MatrixBodyParseResult {
-        val valid = entities.validIn(markdown)
+    fun annotateSource(markdown: String, entities: List<MatrixInlineEntity> = emptyList()): MatrixBodyParseResult =
+        annotateSource(MatrixMarkdownContent(markdown, entities))
+
+    /** Formats the markdown source itself, keeping every character in place. */
+    fun annotateSource(content: MatrixMarkdownContent): MatrixBodyParseResult {
+        val markdown = content.text
+        val valid = content.entities
         if (valid.isEmpty()) return sourceAnnotator.annotate(markdown, parse(markdown))
         val masked = EntityMasking.mask(markdown, valid).text
         val result = sourceAnnotator.annotate(markdown, parse(masked), parsed = masked)

@@ -2,7 +2,7 @@ package com.beeper.android.messageformat.composer
 
 import androidx.compose.foundation.text.input.OutputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
-import com.beeper.android.messageformat.markdown.MatrixInlineEntity
+import com.beeper.android.messageformat.markdown.MatrixMarkdownContent
 
 /**
  * Formats the markdown and replaces each inline image's text with [INLINE_IMAGE_PLACEHOLDER].
@@ -10,12 +10,12 @@ import com.beeper.android.messageformat.markdown.MatrixInlineEntity
  */
 internal class ComposerOutputTransformation(
     private val sourceFormatter: MarkdownSourceFormatter,
-    private val entities: () -> List<MatrixInlineEntity>,
+    private val contentFor: (CharSequence) -> MatrixMarkdownContent,
     private val images: () -> List<ComposerInlineImage>,
 ) : OutputTransformation {
 
     override fun TextFieldBuffer.transformOutput() {
-        val styles = sourceFormatter.spanStyles(asCharSequence().toString(), entities())
+        val styles = sourceFormatter.spanStyles(contentFor(asCharSequence()))
         val shownImages = images().filter { it.matches(asCharSequence()) }
         for (image in shownImages.sortedByDescending { it.range.start }) {
             replace(image.range.start, image.range.end, INLINE_IMAGE_PLACEHOLDER.toString())

@@ -117,7 +117,6 @@ class MatrixMarkdownTextFieldStateTest {
         val state = state("@Alice", alice(0, 6))
         state.edit { replace(0, 0, "@") }
         state.textFieldState.undoState.undo()
-        state.reconcileUnobservedEdits()
         state.assertState("@Alice", alice(0, 6))
     }
 
@@ -126,17 +125,17 @@ class MatrixMarkdownTextFieldStateTest {
         val state = state()
         state.edit { replace(0, 0, "oh ") }
         state.textFieldState.undoState.undo()
-        state.reconcileUnobservedEdits()
         state.assertState("hi @Alice there", alice(3, 9))
     }
 
     @Test
-    fun undoingAnInsertedEntityDropsItAndKeepsTheText() {
+    fun undoingAnInsertedEntityDropsItAndRedoBringsItBack() {
         val state = MatrixMarkdownTextFieldState("hey @al")
         state.insertEntity(TextRange(4, 7), "@Alice") { start, end -> alice(start, end) }
         state.textFieldState.undoState.undo()
-        state.reconcileUnobservedEdits()
         state.assertState("hey @al")
+        state.textFieldState.undoState.redo()
+        state.assertState("hey @Alice ", alice(4, 10))
     }
 
     @Test
@@ -144,8 +143,34 @@ class MatrixMarkdownTextFieldStateTest {
         val state = state("@Alice", alice(0, 6))
         state.setContent("@Alice@Alice", listOf(alice(0, 6), alice(6, 12)))
         state.textFieldState.undoState.undo()
-        state.reconcileUnobservedEdits()
         state.assertState("@Alice", alice(0, 6))
+    }
+
+    @Test
+    fun undoingADeletedPillBringsItBack() {
+        val state = state()
+        state.edit { replace(8, 9, ""); selection = TextRange(8) }
+        state.assertState("hi  there")
+        state.textFieldState.undoState.undo()
+        state.assertState("hi @Alice there", alice(3, 9))
+    }
+
+    @Test
+    fun editRightAfterUndoStartsFromTheRealignedEntities() {
+        val state = state()
+        state.edit { replace(0, 0, "oh ") }
+        state.textFieldState.undoState.undo()
+        state.edit { replace(0, 0, "X") }
+        state.assertState("Xhi @Alice there", alice(4, 10))
+    }
+
+    @Test
+    fun editBypassingTheStateKeepsEntitiesInUnchangedText() {
+        val state = state("@Alice", alice(0, 6))
+        state.textFieldState.edit { replace(0, 0, "@") }
+        state.assertState("@@Alice", alice(1, 7))
+        state.textFieldState.edit { replace(3, 3, "x") }
+        state.assertState("@@Axlice")
     }
 
     @Test
@@ -207,6 +232,16 @@ class MatrixMarkdownTextFieldStateTest {
         state.edit { selection = TextRange(5) }
         assertEquals(TextRange(3), state.textFieldState.selection)
         state.edit { selection = TextRange(7) }
+        assertEquals(TextRange(9), state.textFieldState.selection)
+    }
+
+    @Test
+    fun steppingIntoAPillFromItsEdgeCrossesIt() {
+        val state = state()
+        state.edit { selection = TextRange(9) }
+        state.edit { selection = TextRange(8) }
+        assertEquals(TextRange(3), state.textFieldState.selection)
+        state.edit { selection = TextRange(4) }
         assertEquals(TextRange(9), state.textFieldState.selection)
     }
 }

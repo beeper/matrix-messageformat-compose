@@ -8,8 +8,8 @@ import co.touchlab.kermit.Logger
 import com.beeper.android.messageformat.MatrixBodyParseResult
 import com.beeper.android.messageformat.MatrixBodyStyledFormatter
 import com.beeper.android.messageformat.MatrixFormatInteractionState
+import com.beeper.android.messageformat.markdown.MatrixMarkdownContent
 import com.beeper.android.messageformat.markdown.MatrixMarkdownParser
-import com.beeper.android.messageformat.markdown.MatrixInlineEntity
 
 /**
  * The markdown formatting of composer text, as span styles from [formatter].
@@ -20,26 +20,20 @@ internal class MarkdownSourceFormatter(
     private val formatter: MatrixBodyStyledFormatter,
 ) {
     private val log = Logger.withTag("MarkdownSourceFormatter")
-    private var lastText: String? = null
-    private var lastEntities: List<MatrixInlineEntity> = emptyList()
-    private var lastResult: MatrixBodyParseResult? = null
+    private var last: Pair<MatrixMarkdownContent, MatrixBodyParseResult>? = null
 
-    fun annotate(text: String, entities: List<MatrixInlineEntity>): MatrixBodyParseResult {
-        lastResult?.takeIf { text == lastText && entities == lastEntities }?.let { return it }
+    fun annotate(content: MatrixMarkdownContent): MatrixBodyParseResult {
+        last?.takeIf { it.first == content }?.let { return it.second }
         // A parser failure must not break typing
-        val result = runCatching { parser.annotateSource(text, entities) }.getOrElse {
+        val result = runCatching { parser.annotateSource(content) }.getOrElse {
             log.e("Formatting failed, showing plain text", it)
-            MatrixBodyParseResult(text)
+            MatrixBodyParseResult(content.text)
         }
-        return result.also {
-            lastText = text
-            lastEntities = entities
-            lastResult = it
-        }
+        return result.also { last = content to it }
     }
 
-    fun spanStyles(text: String, entities: List<MatrixInlineEntity>): List<AnnotatedString.Range<SpanStyle>> {
-        val result = annotate(text, entities)
+    fun spanStyles(content: MatrixMarkdownContent): List<AnnotatedString.Range<SpanStyle>> {
+        val result = annotate(content)
         val styled = formatter.applyStyle(result, revealedInteractionState(result))
         // Links are not clickable while typing, only styled
         val linkStyles = styled.getLinkAnnotations(0, styled.length).mapNotNull { link ->
