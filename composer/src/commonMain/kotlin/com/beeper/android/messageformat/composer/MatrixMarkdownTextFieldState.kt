@@ -55,7 +55,7 @@ class MatrixMarkdownTextFieldState(
      * knows gets its entities back, and any other text keeps the entities that the change left intact.
      */
     internal fun contentFor(text: CharSequence): MatrixMarkdownContent {
-        // Read even when realigned, so that whoever observes the content sees the next aligned edit
+        // Read even if realigned is used instead, so that observers of the content are notified of the next edit
         val observed = aligned
         val latest = realigned ?: observed
         if (text.contentEquals(latest.text)) return latest
@@ -128,8 +128,8 @@ private fun MatrixMarkdownContent.entitiesAfterChangeTo(text: String): List<Matr
     EntityReconciler.reconcileUnobserved(entities, this.text, text)
 
 /**
- * The contents on both sides of the latest edits whose entities the texts alone do not tell, such as an
- * edit that removed an entity. They give a text its entities back when undo or redo returns to it.
+ * The contents before and after each recent edit that changed entities in a way the two texts do not show,
+ * such as removing one. A text that undo or redo returns to gets its entities back from here.
  */
 private class ContentHistory {
     private val contents = LinkedHashMap<String, MatrixMarkdownContent>()
@@ -144,7 +144,7 @@ private class ContentHistory {
             put(previous)
             put(content)
         } else if (content.text in contents) {
-            // The text has other entities now than when it was recorded
+            // A recorded text that an edit arrives at again may have other entities by now
             contents[content.text] = content
         }
     }

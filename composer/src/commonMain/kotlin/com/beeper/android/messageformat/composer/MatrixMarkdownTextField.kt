@@ -25,13 +25,12 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import com.beeper.android.messageformat.MatrixBodyDrawStyle
 import com.beeper.android.messageformat.MatrixBodyStyledFormatter
@@ -44,8 +43,8 @@ import kotlin.math.roundToInt
 
 /**
  * A text field that formats markdown in place, as [features] allow.
- * Custom emotes show as [emote] draws them, in the size of [emotePlaceholder], and as their text without
- * [emote]. [emotePlaceholder] must depend only on the emote and on snapshot state.
+ * Custom emotes show as [emote] draws them, in the size [emoteSize] gives, and as their text without
+ * [emote]. [emoteSize] must depend only on the emote and on snapshot state.
  */
 @Composable
 fun MatrixMarkdownTextField(
@@ -56,7 +55,7 @@ fun MatrixMarkdownTextField(
     formatter: MatrixBodyStyledFormatter = defaultMatrixComposerStyledFormatter(textStyle),
     drawStyle: MatrixBodyDrawStyle = remember { MatrixBodyDrawStyle() },
     emote: (@Composable (MatrixInlineEntity.CustomEmote) -> Unit)? = null,
-    emotePlaceholder: (MatrixInlineEntity.CustomEmote) -> Placeholder = { DefaultEmotePlaceholder },
+    emoteSize: (MatrixInlineEntity.CustomEmote) -> MatrixComposerEmoteSize = { MatrixComposerEmoteSize.Default },
     enabled: Boolean = true,
     lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
@@ -70,10 +69,10 @@ fun MatrixMarkdownTextField(
     val parser = remember(features) { MatrixMarkdownParser(features) }
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
-    val currentEmotePlaceholder by rememberUpdatedState(emotePlaceholder.takeIf { emote != null })
+    val currentEmoteSize by rememberUpdatedState(emoteSize.takeIf { emote != null })
     val renderer = remember(parser, formatter, textStyle, textMeasurer, density) {
         ComposerRenderer(parser, formatter) { entity ->
-            currentEmotePlaceholder?.let { emotePlaceholderStyle(it(entity), textStyle, textMeasurer, density) }
+            currentEmoteSize?.let { emotePlaceholderStyle(it(entity), textStyle, textMeasurer, density) }
         }
     }
     val outputTransformation = remember(state, renderer) {
@@ -129,8 +128,12 @@ fun MatrixMarkdownTextField(
     )
 }
 
-/** A square as tall as the text's font size. */
-val DefaultEmotePlaceholder = Placeholder(1.em, 1.em, PlaceholderVerticalAlign.TextCenter)
+/** The size of a custom emote in a [MatrixMarkdownTextField], in sp or in em of the text's font size. */
+data class MatrixComposerEmoteSize(val width: TextUnit, val height: TextUnit) {
+    companion object {
+        val Default = MatrixComposerEmoteSize(1.em, 1.em)
+    }
+}
 
 /** Lays out each emote of [render] over its placeholder character. */
 @Composable

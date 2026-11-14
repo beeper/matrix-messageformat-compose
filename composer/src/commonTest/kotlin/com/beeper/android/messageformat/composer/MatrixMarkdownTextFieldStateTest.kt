@@ -160,7 +160,7 @@ class MatrixMarkdownTextFieldStateTest {
         val state = state()
         state.edit { replace(8, 9, ""); selection = TextRange(8) }
         repeat(300) { state.edit { replace(length, length, "a") } }
-        // The undo history keeps fewer steps than this unless it merges them, as it does for typed text
+        // Stands in for undo, whose history holds fewer steps than this unless it merges them, as it does for typing
         state.textFieldState.edit { replace(0, length, "hi  there") }
         state.assertState("hi  there")
         state.textFieldState.edit { replace(0, length, "hi @Alice there") }

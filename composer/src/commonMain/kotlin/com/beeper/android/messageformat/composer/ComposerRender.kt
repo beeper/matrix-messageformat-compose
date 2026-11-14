@@ -3,7 +3,6 @@ package com.beeper.android.messageformat.composer
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
@@ -94,16 +93,16 @@ internal class ComposerRenderer(
     }
 }
 
-/** Sizes one [EMOTE_PLACEHOLDER] to [placeholder] through font size and letter spacing. */
+/** Sizes one [EMOTE_PLACEHOLDER] to [size] through font size and letter spacing. */
 internal fun emotePlaceholderStyle(
-    placeholder: Placeholder,
+    size: MatrixComposerEmoteSize,
     textStyle: TextStyle,
     textMeasurer: TextMeasurer,
     density: Density,
 ): SpanStyle {
     val baseFontSize = textStyle.fontSize.takeIf { it.isSpecified } ?: DEFAULT_FONT_SIZE
-    val height = placeholder.height.resolve(baseFontSize)
-    val width = placeholder.width.resolve(baseFontSize)
+    val height = size.height.resolve(baseFontSize)
+    val width = size.width.resolve(baseFontSize)
     // The span's letter spacing replaces that of the text style, so the glyph is measured without any
     val glyphStyle = textStyle.copy(fontSize = height, letterSpacing = 0.sp)
     val advance = textMeasurer.measure(EMOTE_PLACEHOLDER.toString(), glyphStyle).size.width

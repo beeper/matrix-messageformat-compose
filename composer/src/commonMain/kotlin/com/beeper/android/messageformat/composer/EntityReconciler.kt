@@ -60,6 +60,7 @@ internal object EntityReconciler {
         before: CharSequence,
         after: CharSequence,
     ): List<MatrixInlineEntity> {
+        if (entities.isEmpty()) return entities
         val edit = Edit(listOf(Change(TextRange(0, before.length), TextRange(0, after.length))), before, after)
         return entities.zip(outcomesFor(entities, edit)).mapNotNull { (entity, outcome) ->
             (outcome as? Outcome.Moved)?.let { entity.moved(it.start, it.end) }
