@@ -25,7 +25,7 @@ class MatrixMarkdownTextFieldState(
     /** The content as of the last edit that went through this class. */
     private var aligned by mutableStateOf(MatrixMarkdownContent(initialText, initialEntities).also(history::record))
 
-    /** [aligned] caught up with an edit that bypassed this class, such as undo. Only a cache for [contentFor]. */
+    /** What [contentFor] made of [aligned] after an edit that bypassed this class, such as undo. */
     private var realigned: MatrixMarkdownContent? = null
 
     /** The text with its entities, which always fit that text. */
@@ -49,6 +49,7 @@ class MatrixMarkdownTextFieldState(
      * a text seen before gets its entities back, and any other text keeps the entities the edit left intact.
      */
     internal fun contentFor(text: CharSequence): MatrixMarkdownContent {
+        // Read even when realigned, so that whoever observes the content sees the next aligned edit
         val observed = aligned
         val latest = realigned ?: observed
         if (text.contentEquals(latest.text)) return latest

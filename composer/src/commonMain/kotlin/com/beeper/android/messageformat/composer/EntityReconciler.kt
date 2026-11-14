@@ -174,7 +174,7 @@ internal object EntityReconciler {
         val inside = entities.firstOrNull { it.start < cursor && cursor < it.end } ?: return
         val from = originalSelection
         val target = when {
-            // Stepping in from an edge crosses the entity, snapping back would trap arrow keys
+            // A cursor stepping in from an edge crosses the entity, as snapping back would trap arrow keys
             from.collapsed && from.start == inside.end -> inside.start
             from.collapsed && from.start == inside.start -> inside.end
             cursor - inside.start < inside.end - cursor -> inside.start

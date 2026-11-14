@@ -63,7 +63,6 @@ class MatrixMarkdownParser(features: Set<MarkdownFeature>) {
     fun annotateSource(markdown: String, entities: List<MatrixInlineEntity> = emptyList()): MatrixBodyParseResult =
         annotateSource(MatrixMarkdownContent(markdown, entities))
 
-    /** Formats the markdown source itself, keeping every character in place. */
     fun annotateSource(content: MatrixMarkdownContent): MatrixBodyParseResult {
         val markdown = content.text
         val valid = content.entities

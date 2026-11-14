@@ -5,7 +5,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.KeyboardActionHandler
 import androidx.compose.foundation.text.input.TextFieldDecorator
@@ -26,23 +25,27 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.em
 import com.beeper.android.messageformat.MatrixBodyDrawStyle
-import com.beeper.android.messageformat.MatrixBodyParseResult
 import com.beeper.android.messageformat.MatrixBodyStyledFormatter
 import com.beeper.android.messageformat.drawMatrixBodyBackgrounds
 import com.beeper.android.messageformat.matrixFormatOnTextRenderResult
-import com.beeper.android.messageformat.markdown.MatrixMarkdownParser
 import com.beeper.android.messageformat.markdown.MarkdownFeature
+import com.beeper.android.messageformat.markdown.MatrixInlineEntity
+import com.beeper.android.messageformat.markdown.MatrixMarkdownParser
 import kotlin.math.roundToInt
 
 /**
  * A text field that formats markdown in place, as [features] allow.
- * Custom emotes render through [inlineContent].
+ * Custom emotes show as [emote] draws them, in the size of [emotePlaceholder], and as their text without
+ * [emote]. [emotePlaceholder] must depend only on the emote and on snapshot state.
  */
 @Composable
 fun MatrixMarkdownTextField(
@@ -52,7 +55,8 @@ fun MatrixMarkdownTextField(
     textStyle: TextStyle = TextStyle.Default,
     formatter: MatrixBodyStyledFormatter = defaultMatrixComposerStyledFormatter(textStyle),
     drawStyle: MatrixBodyDrawStyle = remember { MatrixBodyDrawStyle() },
-    inlineContent: (@Composable (MatrixBodyParseResult) -> Map<String, InlineTextContent>)? = null,
+    emote: (@Composable (MatrixInlineEntity.CustomEmote) -> Unit)? = null,
+    emotePlaceholder: (MatrixInlineEntity.CustomEmote) -> Placeholder = { DefaultEmotePlaceholder },
     enabled: Boolean = true,
     lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
@@ -64,24 +68,18 @@ fun MatrixMarkdownTextField(
     decorator: TextFieldDecorator? = null,
 ) {
     val parser = remember(features) { MatrixMarkdownParser(features) }
-    val sourceFormatter = remember(parser, formatter) { MarkdownSourceFormatter(parser, formatter) }
-
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
-    val parseResult = sourceFormatter.annotate(state.content)
-    val images = if (inlineContent == null) {
-        emptyList()
-    } else {
-        val content = inlineContent(parseResult)
-        remember(parseResult, content, textStyle, textMeasurer, density) {
-            composerInlineImages(parseResult, content, textStyle, textMeasurer, density)
+    val currentEmotePlaceholder by rememberUpdatedState(emotePlaceholder.takeIf { emote != null })
+    val renderer = remember(parser, formatter, textStyle, textMeasurer, density) {
+        ComposerRenderer(parser, formatter) { entity ->
+            currentEmotePlaceholder?.let { emotePlaceholderStyle(it(entity), textStyle, textMeasurer, density) }
         }
     }
-    val currentImages by rememberUpdatedState(images)
-    val outputTransformation = remember(state, sourceFormatter) {
-        ComposerOutputTransformation(sourceFormatter, state::contentFor) { currentImages }
+    val outputTransformation = remember(state, renderer) {
+        ComposerOutputTransformation { text -> renderer.render(state.contentFor(text)) }
     }
-    val transformedOffsets = remember(images) { TransformedOffsets(images) }
+    val render = renderer.render(state.content)
 
     var layoutProvider by remember { mutableStateOf<(() -> TextLayoutResult?)?>(null) }
     val scrollsVertically = lineLimits is TextFieldLineLimits.MultiLine
@@ -89,16 +87,12 @@ fun MatrixMarkdownTextField(
         if (scrollsVertically) 0 else -scrollState.value,
         if (scrollsVertically) -scrollState.value else 0,
     )
-    val transformedText = remember(parseResult, transformedOffsets) {
-        transformedOffsets.transform(parseResult.text)
-    }
-    val interactionState = remember(parseResult) { revealedInteractionState(parseResult) }
     val backgrounds = Modifier.drawBehind {
-        val layout = layoutProvider?.invoke() ?: return@drawBehind
-        val result = matrixFormatOnTextRenderResult(transformedText, drawStyle, layout)
+        val layout = layoutProvider?.invoke()?.takeIf(render::fits) ?: return@drawBehind
+        val result = matrixFormatOnTextRenderResult(render.displayText, drawStyle, layout)
         val offset = scrollOffset()
         translate(left = offset.x.toFloat(), top = offset.y.toFloat()) {
-            drawMatrixBodyBackgrounds(drawStyle, result, interactionState)
+            drawMatrixBodyBackgrounds(drawStyle, result, render.interactionState)
         }
     }
     BasicTextField(
@@ -120,12 +114,14 @@ fun MatrixMarkdownTextField(
                 Box(backgrounds.clipToBounds()) {
                     if (placeholder != null && state.text.isEmpty()) placeholder()
                     innerTextField()
-                    InlineImages(
-                        images = images,
-                        offsets = transformedOffsets,
-                        layout = { layoutProvider?.invoke() },
-                        scrollOffset = ::scrollOffset,
-                    )
+                    if (emote != null) {
+                        Emotes(
+                            render = render,
+                            emote = emote,
+                            layout = { layoutProvider?.invoke() },
+                            scrollOffset = ::scrollOffset,
+                        )
+                    }
                 }
             }
             if (decorator != null) decorator.Decoration(decorated) else decorated()
@@ -133,22 +129,28 @@ fun MatrixMarkdownTextField(
     )
 }
 
-/** Lays out each inline image over its placeholder character. */
+/** A square as tall as the text's font size. */
+val DefaultEmotePlaceholder = Placeholder(1.em, 1.em, PlaceholderVerticalAlign.TextCenter)
+
+/** Lays out each emote of [render] over its placeholder character. */
 @Composable
-private fun InlineImages(
-    images: List<ComposerInlineImage>,
-    offsets: TransformedOffsets,
+private fun Emotes(
+    render: ComposerRender,
+    emote: @Composable (MatrixInlineEntity.CustomEmote) -> Unit,
     layout: () -> TextLayoutResult?,
     scrollOffset: () -> IntOffset,
 ) {
-    if (images.isEmpty()) return
-    // One Box per image, so each image is exactly one measurable
-    val content: @Composable () -> Unit = { images.forEach { Box { it.content.children(it.alt) } } }
+    val emotes = render.emotes
+    if (emotes.isEmpty()) return
+    // One Box per emote, so each emote is exactly one measurable, sized to its placeholder
+    val content: @Composable () -> Unit = {
+        emotes.forEach { Box(propagateMinConstraints = true) { emote(it.entity) } }
+    }
     Layout(content) { measurables, constraints ->
-        val layoutResult = layout()
-        val boxes = images.map { image ->
-            val placeholderOffset = offsets.toTransformed(image.range.start)
-            layoutResult?.placeholderBox(placeholderOffset, image.style.fontSize.toPx())
+        val layoutResult = layout()?.takeIf(render::fits)
+        val boxes = emotes.map {
+            val placeholderOffset = render.toDisplayOffset(it.range.start)
+            layoutResult?.placeholderBox(placeholderOffset, it.style.fontSize.toPx())
         }
         val placeables = measurables.mapIndexed { index, measurable ->
             val box = boxes[index] ?: return@mapIndexed null
@@ -167,7 +169,7 @@ private fun InlineImages(
 }
 
 /**
- * Where to draw the inline image whose placeholder character sits at [transformedOffset]: as wide
+ * Where to draw the emote whose placeholder character sits at [transformedOffset]: as wide
  * as that character, [heightPx] tall, and centered on the line like
  * [androidx.compose.ui.text.PlaceholderVerticalAlign.TextCenter].
  */

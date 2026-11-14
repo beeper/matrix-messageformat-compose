@@ -373,11 +373,7 @@ fun TextRenderScreen() {
                 MatrixMarkdownTextField(
                     state = composerState,
                     features = markdownFeatures,
-                    inlineContent = { result ->
-                        result.inlineImages.toInlineContent(LocalDensity.current, MaterialTheme.typography.bodyLarge.fontSize) { info, imageModifier ->
-                            Image(Icons.Default.Image, info.alt ?: info.title, imageModifier)
-                        }
-                    },
+                    emote = { Image(Icons.Default.Image, it.body ?: it.shortcode) },
                     textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxSize().weight(1f)
                         .border(1.dp, MaterialTheme.colorScheme.outline)
