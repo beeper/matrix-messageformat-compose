@@ -20,15 +20,16 @@ import org.intellij.markdown.flavours.gfm.GFMTokenTypes
 import org.intellij.markdown.parser.LinkMap
 
 /**
- * Annotate markdown text for inline formatting.
+ * Annotates markdown source with its formatting, keeping every character in place.
  */
 internal class MarkdownSourceAnnotator(private val features: Set<MarkdownFeature>) {
 
-    fun annotate(markdown: String, tree: ASTNode): MatrixBodyParseResult {
+    /** Annotates [markdown] by [tree], which was parsed from [parsed], a copy with entities masked. */
+    fun annotate(markdown: String, tree: ASTNode, parsed: String = markdown): MatrixBodyParseResult {
         val expandableItems = mutableSetOf<Int>()
         val text = buildAnnotatedString {
             append(markdown)
-            Visitor(this, markdown, expandableItems).visit(tree)
+            Visitor(this, parsed, expandableItems).visit(tree)
         }
         return MatrixBodyParseResult(text = text, expandableItems = expandableItems)
     }
@@ -47,7 +48,7 @@ internal class MarkdownSourceAnnotator(private val features: Set<MarkdownFeature
                 MatrixMarkdownElementTypes.SPOILER -> spoiler(node)
                 MarkdownElementTypes.CODE_SPAN -> codeSpan(node)
                 MarkdownElementTypes.CODE_FENCE -> codeFence(node)
-                in HEADINGS -> heading(node, HEADINGS.indexOf(node.type) + 1)
+                in ATX_HEADINGS -> heading(node, ATX_HEADINGS.indexOf(node.type) + 1)
                 MarkdownElementTypes.INLINE_LINK -> inlineLink(node)
                 MarkdownElementTypes.AUTOLINK -> autolink(node)
                 MarkdownElementTypes.IMAGE -> image(node)
@@ -168,15 +169,6 @@ internal class MarkdownSourceAnnotator(private val features: Set<MarkdownFeature
         val BOLD = SpanStyle(fontWeight = FontWeight.Bold)
         val ITALIC = SpanStyle(fontStyle = FontStyle.Italic)
         val STRIKETHROUGH = SpanStyle(textDecoration = TextDecoration.LineThrough)
-
-        val HEADINGS: List<IElementType> = listOf(
-            MarkdownElementTypes.ATX_1,
-            MarkdownElementTypes.ATX_2,
-            MarkdownElementTypes.ATX_3,
-            MarkdownElementTypes.ATX_4,
-            MarkdownElementTypes.ATX_5,
-            MarkdownElementTypes.ATX_6,
-        )
 
         val MARKER_TOKENS: Set<IElementType> = setOf(
             MarkdownTokenTypes.LIST_BULLET,

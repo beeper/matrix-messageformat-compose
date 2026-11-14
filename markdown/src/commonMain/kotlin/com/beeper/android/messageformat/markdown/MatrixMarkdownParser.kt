@@ -29,8 +29,7 @@ class MatrixMarkdownParser(features: Set<MarkdownFeature>) {
     fun toHtml(markdown: String, entities: List<MatrixInlineEntity> = emptyList()): String {
         val valid = entities.validIn(markdown)
         if (valid.isEmpty()) {
-            val generator = HtmlGenerator(markdown, parse(markdown), flavour, includeSrcPositions = false)
-            return generator.generateHtml().unwrapSingleParagraph()
+            return HtmlGenerator(markdown, parse(markdown), flavour).generateHtml().unwrapSingleParagraph()
         }
         val masking = EntityMasking.mask(markdown, valid)
         val providers = MatrixHtmlProviders.create(flavour.features) { html ->
@@ -58,15 +57,10 @@ class MatrixMarkdownParser(features: Set<MarkdownFeature>) {
         val valid = entities.validIn(markdown)
         if (valid.isEmpty()) return sourceAnnotator.annotate(markdown, parse(markdown))
         val masked = EntityMasking.mask(markdown, valid).text
-        val result = sourceAnnotator.annotate(masked, parse(masked))
+        val result = sourceAnnotator.annotate(markdown, parse(masked), parsed = masked)
         val inlineImages = mutableMapOf<String, InlineImageInfo>()
         val text = buildAnnotatedString {
-            append(markdown)
-            result.text.spanStyles.forEach { addStyle(it.item, it.start, it.end) }
-            result.text.paragraphStyles.forEach { addStyle(it.item, it.start, it.end) }
-            result.text.getStringAnnotations(0, length).forEach {
-                addStringAnnotation(it.tag, it.item, it.start, it.end)
-            }
+            append(result.text)
             valid.forEachIndexed { index, entity ->
                 when (entity) {
                     is MatrixInlineEntity.UserMention -> {
@@ -94,7 +88,7 @@ class MatrixMarkdownParser(features: Set<MarkdownFeature>) {
         return result.copy(text = text, inlineImages = inlineImages)
     }
 
-    /** [markdown] with every entity replaced by its [MatrixInlineEntity.sentText], expecting [entities] in text order. */
+    /** [markdown] with each of [entities], in text order, replaced by its [MatrixInlineEntity.sentText]. */
     private fun sentBody(markdown: String, entities: List<MatrixInlineEntity>): String {
         val body = StringBuilder(markdown)
         for (entity in entities.asReversed()) {

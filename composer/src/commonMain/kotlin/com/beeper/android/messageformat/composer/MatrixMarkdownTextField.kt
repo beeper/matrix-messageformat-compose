@@ -37,7 +37,6 @@ import com.beeper.android.messageformat.MatrixBodyParseResult
 import com.beeper.android.messageformat.MatrixBodyStyledFormatter
 import com.beeper.android.messageformat.drawMatrixBodyBackgrounds
 import com.beeper.android.messageformat.matrixFormatOnTextRenderResult
-import com.beeper.android.messageformat.rememberMatrixFormatInteractionState
 import com.beeper.android.messageformat.markdown.MatrixMarkdownParser
 import com.beeper.android.messageformat.markdown.MarkdownFeature
 import kotlin.math.roundToInt
@@ -66,17 +65,9 @@ fun MatrixMarkdownTextField(
     decorator: TextFieldDecorator? = null,
 ) {
     val parser = remember(features) { MatrixMarkdownParser(features) }
-    val sourceFormatter = remember(parser, formatter) {
-        MarkdownSourceFormatter(parser, formatter)
-    }
+    val sourceFormatter = remember(parser, formatter) { MarkdownSourceFormatter(parser, formatter) }
 
-    SideEffect {
-        if (state.sourceFormatter !== sourceFormatter) {
-            state.sourceFormatter = sourceFormatter
-            state.refreshFormatting()
-        }
-        state.reconcileUnobservedEdits()
-    }
+    SideEffect { state.reconcileUnobservedEdits() }
 
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
@@ -90,7 +81,9 @@ fun MatrixMarkdownTextField(
         }
     }
     val currentImages by rememberUpdatedState(images)
-    val outputTransformation = remember(state) { ComposerOutputTransformation { currentImages } }
+    val outputTransformation = remember(state, sourceFormatter) {
+        ComposerOutputTransformation(sourceFormatter, { state.entities }) { currentImages }
+    }
     val transformedOffsets = remember(images) { TransformedOffsets(images) }
 
     var layoutProvider by remember { mutableStateOf<(() -> TextLayoutResult?)?>(null) }
@@ -102,7 +95,7 @@ fun MatrixMarkdownTextField(
     val transformedText = remember(parseResult, transformedOffsets) {
         transformedOffsets.transform(parseResult.text)
     }
-    val interactionState = rememberMatrixFormatInteractionState(parseResult)
+    val interactionState = remember(parseResult) { revealedInteractionState(parseResult) }
     val backgrounds = Modifier.drawBehind {
         val layout = layoutProvider?.invoke() ?: return@drawBehind
         val result = matrixFormatOnTextRenderResult(transformedText, drawStyle, layout)

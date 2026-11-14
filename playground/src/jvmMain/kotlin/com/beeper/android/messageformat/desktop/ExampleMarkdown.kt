@@ -1,6 +1,6 @@
 package com.beeper.android.messageformat.desktop
 
-val EXAMPLE_MARKDOWN = """
+internal val EXAMPLE_MARKDOWN = """
 # Markdown input
 
 Some **bold**, _italic_, ~~struck~~ and `inline code` text, plus a ||spoiler|| and a ||reason|hidden part||.

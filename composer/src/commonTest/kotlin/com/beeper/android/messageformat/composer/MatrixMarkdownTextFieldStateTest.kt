@@ -1,8 +1,6 @@
 package com.beeper.android.messageformat.composer
 
 import androidx.compose.ui.text.TextRange
-import com.beeper.android.messageformat.markdown.MatrixMarkdownParser
-import com.beeper.android.messageformat.markdown.MarkdownFeature
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -195,41 +193,11 @@ class MatrixMarkdownTextFieldStateTest {
     }
 
     @Test
-    fun formattingFollowsEveryEdit() {
-        val state = MatrixMarkdownTextFieldState("plain")
-        state.sourceFormatter = MarkdownSourceFormatter(MatrixMarkdownParser(MarkdownFeature.ALL), NoStyleFormatter())
-        state.refreshFormatting()
-        state.edit { replace(0, 5, "**bold** text") }
-        state.edit { assertEquals(listOf(TextRange(2, 6)), getSpanStyles(TextRange(0, length)).map { it.textRange }) }
-        state.insertText("!")
-        state.edit { assertEquals(listOf(TextRange(2, 6)), getSpanStyles(TextRange(0, length)).map { it.textRange }) }
-        state.setContent("no markup")
-        state.edit { assertEquals(emptyList(), getSpanStyles(TextRange(0, length)).map { it.textRange }) }
-    }
-
-    @Test
     fun cursorSnapsOutOfPills() {
         val state = state()
         state.edit { selection = TextRange(5) }
         assertEquals(TextRange(3), state.textFieldState.selection)
         state.edit { selection = TextRange(7) }
         assertEquals(TextRange(9), state.textFieldState.selection)
-    }
-
-    @Test
-    fun draftCarriesBodyHtmlAndMentions() {
-        val parser = MatrixMarkdownParser(MarkdownFeature.ALL)
-        val state = state("hi @Alice and @room", alice(3, 9), MatrixInlineEntity.RoomMention(14, 19))
-        val content = state.toDraft(parser)
-        assertEquals("hi @Alice and @room", content.body)
-        assertEquals(
-            "hi <a href=\"https://matrix.to/#/@alice:example.org\">@Alice</a> and @room",
-            content.formattedBody,
-        )
-        assertEquals(listOf("@alice:example.org"), content.mentionedUserIds)
-        assertEquals(true, content.mentionsRoom)
-
-        val plain = MatrixMarkdownTextFieldState("just text").toDraft(parser)
-        assertEquals(null, plain.formattedBody)
     }
 }

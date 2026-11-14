@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +33,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -56,15 +58,12 @@ import com.beeper.android.messageformat.MatrixHtmlParser
 import com.beeper.android.messageformat.MatrixBodyPreFormatStyle
 import com.beeper.android.messageformat.MatrixStyledFormattedText
 import com.beeper.android.messageformat.StrippedFormattingRenderer
-import com.beeper.android.messageformat.markdown.MatrixMarkdownParser
-import com.beeper.android.messageformat.markdown.MarkdownFeature
-import com.beeper.android.messageformat.toInlineContent
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.text.TextRange
-import com.beeper.android.messageformat.composer.MatrixMarkdownTextFieldState
 import com.beeper.android.messageformat.composer.MatrixMarkdownTextField
+import com.beeper.android.messageformat.composer.MatrixMarkdownTextFieldState
+import com.beeper.android.messageformat.markdown.MarkdownFeature
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
+import com.beeper.android.messageformat.markdown.MatrixMarkdownParser
+import com.beeper.android.messageformat.toInlineContent
 
 fun main() = application {
     Window(onCloseRequest = ::exitApplication, title = "Message Render Playground") {
@@ -361,14 +360,12 @@ fun TextRenderScreen() {
             if (markdownInput) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = {
-                        val cursor = composerState.textFieldState.selection
-                        composerState.insertEntity(TextRange(cursor.start, cursor.end), "@Alice") { start, end ->
+                        composerState.insertEntity(composerState.textFieldState.selection, "@Alice") { start, end ->
                             MatrixInlineEntity.UserMention(start, end, "@alice:example.org")
                         }
                     }) { Text("Insert mention") }
                     TextButton(onClick = {
-                        val cursor = composerState.textFieldState.selection
-                        composerState.insertEntity(TextRange(cursor.start, cursor.end), ":example_emote:") { start, end ->
+                        composerState.insertEntity(composerState.textFieldState.selection, ":example_emote:") { start, end ->
                             MatrixInlineEntity.CustomEmote(start, end, "example_emote", "mxc://local.beeper.com/spiritcroc_TnTnE9q1fOXD0gtA9UlcBrStvCVLWwAbAtKcAIOKqWJRtQeZwsniGSRVA8xV51tB")
                         }
                     }) { Text("Insert custom emote") }
@@ -386,14 +383,6 @@ fun TextRenderScreen() {
                         .border(1.dp, MaterialTheme.colorScheme.outline)
                         .padding(8.dp),
                 )
-            } else {
-                TextField(
-                    value = textInput,
-                    onValueChange = { textInput = it },
-                    modifier = Modifier.fillMaxSize().weight(1f),
-                )
-            }
-            if (markdownInput) {
                 Text(
                     "Generated HTML:",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -408,6 +397,12 @@ fun TextRenderScreen() {
                 ) {
                     Text(htmlInput, style = MaterialTheme.typography.bodySmall)
                 }
+            } else {
+                TextField(
+                    value = textInput,
+                    onValueChange = { textInput = it },
+                    modifier = Modifier.fillMaxSize().weight(1f),
+                )
             }
             if (withFooter) {
                 Text(

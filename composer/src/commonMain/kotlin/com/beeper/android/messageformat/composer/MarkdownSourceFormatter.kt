@@ -1,8 +1,9 @@
 package com.beeper.android.messageformat.composer
 
-import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
 import co.touchlab.kermit.Logger
 import com.beeper.android.messageformat.MatrixBodyParseResult
 import com.beeper.android.messageformat.MatrixBodyStyledFormatter
@@ -11,7 +12,7 @@ import com.beeper.android.messageformat.markdown.MatrixMarkdownParser
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
 
 /**
- * Applies the markdown formatting of composer text to a [TextFieldBuffer] as span styles from [formatter].
+ * The markdown formatting of composer text, as span styles from [formatter].
  * The last parse is kept because the background drawing needs it too.
  */
 internal class MarkdownSourceFormatter(
@@ -37,19 +38,21 @@ internal class MarkdownSourceFormatter(
         }
     }
 
-    fun applyTo(buffer: TextFieldBuffer, entities: List<MatrixInlineEntity>) {
-        val result = annotate(buffer.asCharSequence().toString(), entities)
-        // Spoilers are never hidden while typing
-        val interaction = MatrixFormatInteractionState(result.expandableItems, mutableStateOf(result.expandableItems))
-        val styled = formatter.applyStyle(result, interaction)
-        // Paragraph styles would split lines into separate paragraphs
-        styled.spanStyles.forEach { buffer.addStyle(it.item, it.start, it.end) }
+    fun spanStyles(text: String, entities: List<MatrixInlineEntity>): List<AnnotatedString.Range<SpanStyle>> {
+        val result = annotate(text, entities)
+        val styled = formatter.applyStyle(result, revealedInteractionState(result))
         // Links are not clickable while typing, only styled
-        styled.getLinkAnnotations(0, styled.length).forEach { link ->
-            link.item.linkStyles?.style?.let { buffer.addStyle(it, link.start, link.end) }
+        val linkStyles = styled.getLinkAnnotations(0, styled.length).mapNotNull { link ->
+            link.item.linkStyles?.style?.let { AnnotatedString.Range(it, link.start, link.end) }
         }
+        // Paragraph styles would split lines into separate paragraphs
+        return styled.spanStyles + linkStyles
     }
 }
+
+/** Spoilers are never hidden while typing. */
+internal fun revealedInteractionState(result: MatrixBodyParseResult) =
+    MatrixFormatInteractionState(result.expandableItems, mutableStateOf(result.expandableItems))
 
 private val LinkAnnotation.linkStyles
     get() = when (this) {

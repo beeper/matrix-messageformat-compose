@@ -8,7 +8,10 @@ import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.beeper.android.messageformat.markdown.MarkdownFeature
+import com.beeper.android.messageformat.markdown.MatrixMarkdownParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -20,6 +23,23 @@ class ComposerInlineImageTest {
         content = InlineTextContent(Placeholder(20.sp, 20.sp, PlaceholderVerticalAlign.TextCenter)) {},
         style = SpanStyle(fontSize = 20.sp),
     )
+
+    private val sourceFormatter = MarkdownSourceFormatter(MatrixMarkdownParser(MarkdownFeature.ALL), NoStyleFormatter())
+
+    private fun transformation(vararg images: ComposerInlineImage) =
+        ComposerOutputTransformation(sourceFormatter, { emptyList() }) { images.toList() }
+
+    @Test
+    fun transformationFormatsMarkdownAroundPlaceholders() {
+        val state = TextFieldState(":cat: **hi**")
+        state.edit {
+            with(transformation(image(0, 5))) { transformOutput() }
+            val bold = getSpanStyles(TextRange(0, length))
+                .filter { it.spanStyle.fontWeight == FontWeight.Bold }
+                .map { it.textRange }
+            assertEquals(listOf(TextRange(4, 6)), bold)
+        }
+    }
 
     @Test
     fun transformedOffsetsCollapseEachImageToOneCharacter() {
@@ -34,7 +54,7 @@ class ComposerInlineImageTest {
 
     @Test
     fun transformationReplacesShortcodesWithStyledPlaceholders() {
-        val transformation = ComposerOutputTransformation { listOf(image(3, 8), image(13, 19, "dog!")) }
+        val transformation = transformation(image(3, 8), image(13, 19, "dog!"))
         val state = TextFieldState("hi :cat: and :dog!: there")
         state.edit {
             with(transformation) { transformOutput() }
@@ -49,7 +69,7 @@ class ComposerInlineImageTest {
 
     @Test
     fun transformationSkipsImagesWhoseTextMovedAway() {
-        val transformation = ComposerOutputTransformation { listOf(image(3, 8)) }
+        val transformation = transformation(image(3, 8))
         val state = TextFieldState("hey :cat: there")
         state.edit {
             with(transformation) { transformOutput() }

@@ -1,6 +1,5 @@
 package com.beeper.android.messageformat.composer
 
-import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -14,8 +13,8 @@ import com.beeper.android.messageformat.markdown.MarkdownFeature
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotSame
 import kotlin.test.assertSame
-import kotlin.test.assertTrue
 
 class MarkdownSourceFormatterTest {
 
@@ -36,61 +35,38 @@ class MarkdownSourceFormatterTest {
 
     private val sourceFormatter = MarkdownSourceFormatter(MatrixMarkdownParser(MarkdownFeature.ALL), formatter)
 
-    private fun TextFieldState.rangesStyled(style: SpanStyle): List<TextRange> {
-        var ranges = emptyList<TextRange>()
-        edit {
-            ranges = getSpanStyles(TextRange(0, length))
-                .filter { it.spanStyle == style }
-                .map { it.textRange }
-                .sortedBy { it.start }
-        }
-        return ranges
-    }
+    private fun rangesStyled(
+        text: String,
+        style: SpanStyle,
+        entities: List<MatrixInlineEntity> = emptyList(),
+    ): List<TextRange> = sourceFormatter.spanStyles(text, entities)
+        .filter { it.item == style }
+        .map { TextRange(it.start, it.end) }
+        .sortedBy { it.start }
 
     @Test
-    fun appliesSourceStylesAndFormatterStylesToTheBuffer() {
-        val state = TextFieldState("**hi** @Alice")
+    fun stylesSourceAndFormatterStyles() {
+        val text = "**hi** @Alice"
         val alice = MatrixInlineEntity.UserMention(7, 13, "@alice:example.org")
-        state.edit { sourceFormatter.applyTo(this, listOf(alice)) }
-        assertEquals(listOf(TextRange(2, 4)), state.rangesStyled(SpanStyle(fontWeight = FontWeight.Bold)))
-        assertEquals(listOf(TextRange(0, 2), TextRange(4, 6)), state.rangesStyled(marker))
-        assertEquals(listOf(TextRange(7, 13)), state.rangesStyled(mention))
-        assertEquals("**hi** @Alice", state.text.toString())
-    }
-
-    @Test
-    fun neverAppliesParagraphStyles() {
-        val state = TextFieldState("## Title\n\ntext")
-        state.edit {
-            sourceFormatter.applyTo(this, emptyList())
-            assertTrue(getParagraphStyles(TextRange(0, length)).isEmpty())
-        }
-        assertEquals(listOf(TextRange(0, 2)), state.rangesStyled(marker))
+        assertEquals(listOf(TextRange(2, 4)), rangesStyled(text, SpanStyle(fontWeight = FontWeight.Bold)))
+        assertEquals(listOf(TextRange(0, 2), TextRange(4, 6)), rangesStyled(text, marker))
+        assertEquals(listOf(TextRange(7, 13)), rangesStyled(text, mention, listOf(alice)))
     }
 
     @Test
     fun stylesSpoilersThroughTheFormatter() {
-        val state = TextFieldState("a ||secret|| b")
-        state.edit { sourceFormatter.applyTo(this, emptyList()) }
-        assertEquals(listOf(TextRange(4, 10)), state.rangesStyled(spoiler))
+        assertEquals(listOf(TextRange(4, 10)), rangesStyled("a ||secret|| b", spoiler))
     }
 
     @Test
-    fun carriesLinkStylesIntoTheBuffer() {
-        val state = TextFieldState("[site](https://x.org)")
-        state.edit { sourceFormatter.applyTo(this, emptyList()) }
-        assertEquals(listOf(TextRange(1, 5)), state.rangesStyled(link))
+    fun carriesLinkStyles() {
+        assertEquals(listOf(TextRange(1, 5)), rangesStyled("[site](https://x.org)", link))
     }
 
     @Test
     fun reusesTheParseForUnchangedInput() {
         val first = sourceFormatter.annotate("**a**", emptyList())
         assertSame(first, sourceFormatter.annotate("**a**", emptyList()))
-        assertTrue(first !== sourceFormatter.annotate("**b**", emptyList()))
-    }
-
-    @Test
-    fun keepsTextUntouched() {
-        assertEquals("# heading", sourceFormatter.annotate("# heading", emptyList()).text.text)
+        assertNotSame(first, sourceFormatter.annotate("**b**", emptyList()))
     }
 }

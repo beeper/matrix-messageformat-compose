@@ -1,5 +1,6 @@
 package com.beeper.android.messageformat.markdown.html
 
+import com.beeper.android.messageformat.markdown.ATX_HEADINGS
 import com.beeper.android.messageformat.markdown.MatrixMarkdownElementTypes
 import com.beeper.android.messageformat.markdown.MatrixMarkdownTokenTypes
 import com.beeper.android.messageformat.markdown.MarkdownFeature
@@ -49,7 +50,7 @@ internal object MatrixHtmlProviders {
         put(MarkdownElementTypes.ORDERED_LIST, OrderedListProvider)
         put(MarkdownElementTypes.LIST_ITEM, ListItemProvider(inline))
         put(MarkdownTokenTypes.ATX_CONTENT, InlineTagProvider(inline, tagName = null))
-        HEADINGS.forEachIndexed { index, type -> put(type, SimpleTagProvider("h${index + 1}")) }
+        ATX_HEADINGS.forEachIndexed { index, type -> put(type, SimpleTagProvider("h${index + 1}")) }
         put(MarkdownElementTypes.INLINE_LINK, InlineLinkProvider(inline, sentEntityText))
         put(MarkdownElementTypes.AUTOLINK, AutolinkProvider)
         put(MarkdownElementTypes.IMAGE, ImageProvider(sentEntityText))
@@ -57,15 +58,6 @@ internal object MatrixHtmlProviders {
         put(GFMElementTypes.TABLE, TableProvider)
         put(GFMTokenTypes.CELL, InlineTagProvider(inline, tagName = null))
     }
-
-    private val HEADINGS = listOf(
-        MarkdownElementTypes.ATX_1,
-        MarkdownElementTypes.ATX_2,
-        MarkdownElementTypes.ATX_3,
-        MarkdownElementTypes.ATX_4,
-        MarkdownElementTypes.ATX_5,
-        MarkdownElementTypes.ATX_6,
-    )
 
     private fun InlineRenderer.tagOrLiteral(tagName: String, enabled: Boolean, markerTokens: Int) =
         if (enabled) InlineTagProvider(this, tagName, markerTokens) else InlineTagProvider(this, tagName = null)

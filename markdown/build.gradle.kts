@@ -29,7 +29,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.kotlin.stdlib)
-                api(libs.jetbrains.markdown)
+                implementation(libs.jetbrains.markdown)
                 api(project(":messageformat"))
                 implementation(compose.ui)
                 implementation(libs.kotlinx.serialization.json)

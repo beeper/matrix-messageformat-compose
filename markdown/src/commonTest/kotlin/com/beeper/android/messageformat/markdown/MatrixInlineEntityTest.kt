@@ -4,6 +4,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.beeper.android.messageformat.MatrixBodyAnnotations
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class MatrixInlineEntityTest {
@@ -67,7 +68,9 @@ class MatrixInlineEntityTest {
 
     @Test
     fun attributesCarryTheSentTextOfEntities() {
-        val bob = { start: Int, end: Int -> MatrixInlineEntity.UserMention(start, end, "@bob:x", contentText = "@Bob & co") }
+        val bob = { start: Int, end: Int ->
+            MatrixInlineEntity.UserMention(start, end, "@bob:x", contentText = "@Bob & co")
+        }
         assertEquals(
             "<span data-mx-spoiler=\"hi @Bob &amp; co\">secret</span>",
             parser.toHtml("||hi @B|secret||", listOf(bob(5, 7))),
@@ -94,7 +97,7 @@ class MatrixInlineEntityTest {
     }
 
     @Test
-    fun draftSendsContentTextAndRoomMentionText() {
+    fun draftCarriesSentTextAndMentions() {
         val text = "**@Ali** and @everyone"
         val entities = listOf(
             MatrixInlineEntity.UserMention(2, 6, "@alice:example.org", contentText = "@Alice Liddell"),
@@ -103,6 +106,8 @@ class MatrixInlineEntityTest {
         val draft = parser.toDraft(text, entities)
         assertEquals("**@Alice Liddell** and @room", draft.body)
         assertEquals("<strong><a href=\"$alice\">@Alice Liddell</a></strong> and @room", draft.formattedBody)
+        assertEquals(listOf("@alice:example.org"), draft.mentionedUserIds)
+        assertTrue(draft.mentionsRoom)
     }
 
     @Test
@@ -118,7 +123,7 @@ class MatrixInlineEntityTest {
     fun draftWithOnlyRoomMentionStaysPlain() {
         val draft = parser.toDraft("hey @everyone", listOf(MatrixInlineEntity.RoomMention(4, 13)))
         assertEquals("hey @room", draft.body)
-        assertEquals(null, draft.formattedBody)
+        assertNull(draft.formattedBody)
     }
 
     @Test
@@ -154,11 +159,7 @@ class MatrixInlineEntityTest {
 
     @Test
     fun draftStaysPlainWithoutFormatting() {
-        assertEquals(null, parser.toDraft("a & b < c").formattedBody)
-        val mention = MatrixInlineEntity.UserMention(3, 9, "@alice:example.org")
-        val content = parser.toDraft("hi @Alice", listOf(mention))
-        assertEquals("hi <a href=\"$alice\">@Alice</a>", content.formattedBody)
-        assertEquals(listOf("@alice:example.org"), content.mentionedUserIds)
+        assertNull(parser.toDraft("a & b < c").formattedBody)
     }
 
     @Test
