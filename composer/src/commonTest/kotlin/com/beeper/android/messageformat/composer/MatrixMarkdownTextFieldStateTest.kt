@@ -1,5 +1,6 @@
 package com.beeper.android.messageformat.composer
 
+import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.ui.text.TextRange
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
 import kotlin.test.Test
@@ -256,6 +257,23 @@ class MatrixMarkdownTextFieldStateTest {
         assertEquals(TextRange(3), state.textFieldState.selection)
         state.edit { selection = TextRange(7) }
         assertEquals(TextRange(9), state.textFieldState.selection)
+    }
+
+    @Test
+    fun saverRestoresTextEntitiesAndSelection() {
+        val entities = listOf(
+            MatrixInlineEntity.UserMention(0, 6, "@alice:example.org", contentText = "Alice A."),
+            MatrixInlineEntity.RoomMention(7, 12),
+            MatrixInlineEntity.CustomEmote(13, 18, "cat", "mxc://x/cat", packId = "pack", body = "A cat"),
+        )
+        val state = MatrixMarkdownTextFieldState("@Alice @room :cat: hi", entities)
+        state.edit { selection = TextRange(19, 21) }
+
+        val saved = with(MatrixMarkdownTextFieldState.Saver) { SaverScope { true }.save(state) }
+        val restored = MatrixMarkdownTextFieldState.Saver.restore(saved!!)!!
+
+        restored.assertState("@Alice @room :cat: hi", *entities.toTypedArray())
+        assertEquals(TextRange(19, 21), restored.selection)
     }
 
     @Test

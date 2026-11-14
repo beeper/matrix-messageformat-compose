@@ -5,8 +5,12 @@ import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.UndoState
 import androidx.compose.foundation.text.input.delete
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
 import com.beeper.android.messageformat.composer.EntityReconciler.reconcile
@@ -17,10 +21,11 @@ import com.beeper.android.messageformat.markdown.MatrixMarkdownContent
 class MatrixMarkdownTextFieldState(
     initialText: String = "",
     initialEntities: List<MatrixInlineEntity> = emptyList(),
+    initialSelection: TextRange = TextRange(initialText.length),
 ) {
 
     /** Not public, so that undo and redo are the only edits that do not go through this class. */
-    internal val textFieldState = TextFieldState(initialText)
+    internal val textFieldState = TextFieldState(initialText, initialSelection)
 
     private val history = ContentHistory()
 
@@ -122,6 +127,63 @@ class MatrixMarkdownTextFieldState(
         realigned = null
         history.record(previous, content)
     }
+
+    companion object {
+        /** Saves the text, its entities and the selection, but no undo history. */
+        val Saver: Saver<MatrixMarkdownTextFieldState, Any> = listSaver(
+            save = { state ->
+                val content = state.content
+                val entities = content.entities.map { it.toSaveable() }
+                listOf(content.text, entities, state.selection.start, state.selection.end)
+            },
+            restore = { saved ->
+                val text = saved[0] as String
+                val entities = (saved[1] as List<*>).mapNotNull { (it as List<*>).toInlineEntity() }
+                val selection = TextRange(
+                    (saved[2] as Int).coerceIn(0, text.length),
+                    (saved[3] as Int).coerceIn(0, text.length),
+                )
+                MatrixMarkdownTextFieldState(text, entities, selection)
+            },
+        )
+    }
+}
+
+private fun MatrixInlineEntity.toSaveable(): List<Any?> = when (this) {
+    is MatrixInlineEntity.UserMention -> listOf(USER_MENTION, start, end, userId, contentText)
+    is MatrixInlineEntity.RoomMention -> listOf(ROOM_MENTION, start, end)
+    is MatrixInlineEntity.CustomEmote -> listOf(CUSTOM_EMOTE, start, end, shortcode, mxcUrl, packId, body)
+}
+
+private fun List<*>.toInlineEntity(): MatrixInlineEntity? {
+    val start = this[1] as Int
+    val end = this[2] as Int
+    return when (this[0]) {
+        USER_MENTION -> MatrixInlineEntity.UserMention(start, end, this[3] as String, this[4] as String?)
+        ROOM_MENTION -> MatrixInlineEntity.RoomMention(start, end)
+        CUSTOM_EMOTE -> MatrixInlineEntity.CustomEmote(
+            start,
+            end,
+            shortcode = this[3] as String,
+            mxcUrl = this[4] as String,
+            packId = this[5] as String?,
+            body = this[6] as String?,
+        )
+        else -> null
+    }
+}
+
+private const val USER_MENTION = "user"
+private const val ROOM_MENTION = "room"
+private const val CUSTOM_EMOTE = "emote"
+
+/** Remembers a [MatrixMarkdownTextFieldState] that is saved and restored with the composition. */
+@Composable
+fun rememberMatrixMarkdownTextFieldState(
+    initialText: String = "",
+    initialEntities: List<MatrixInlineEntity> = emptyList(),
+): MatrixMarkdownTextFieldState = rememberSaveable(saver = MatrixMarkdownTextFieldState.Saver) {
+    MatrixMarkdownTextFieldState(initialText, initialEntities)
 }
 
 private fun MatrixMarkdownContent.entitiesAfterChangeTo(text: String): List<MatrixInlineEntity> =
