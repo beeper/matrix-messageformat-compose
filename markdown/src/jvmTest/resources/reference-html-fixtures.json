@@ -1,0 +1,342 @@
+[
+  {
+    "markdown": "hello world",
+    "html": "hello world"
+  },
+  {
+    "markdown": "one\n\ntwo",
+    "html": "<p>one</p>\n<p>two</p>"
+  },
+  {
+    "markdown": "one\ntwo",
+    "html": "one<br>\ntwo"
+  },
+  {
+    "markdown": "one  \ntwo",
+    "html": "one<br>\ntwo"
+  },
+  {
+    "markdown": "**bold** _italic_ *also italic* __also bold__",
+    "html": "<strong>bold</strong> <em>italic</em> <em>also italic</em> <strong>also bold</strong>"
+  },
+  {
+    "markdown": "***both***",
+    "html": "<em><strong>both</strong></em>"
+  },
+  {
+    "markdown": "~~gone~~",
+    "html": "<del>gone</del>"
+  },
+  {
+    "markdown": "~single~",
+    "html": "~single~"
+  },
+  {
+    "markdown": "a ~~b~~ c ~~d~~",
+    "html": "a <del>b</del> c <del>d</del>"
+  },
+  {
+    "markdown": "||secret||",
+    "html": "<span data-mx-spoiler>secret</span>"
+  },
+  {
+    "markdown": "a ||secret|| b",
+    "html": "a <span data-mx-spoiler>secret</span> b"
+  },
+  {
+    "markdown": "||why|secret||",
+    "html": "<span data-mx-spoiler=\"why\">secret</span>"
+  },
+  {
+    "markdown": "||a **b**||",
+    "html": "<span data-mx-spoiler>a <strong>b</strong></span>"
+  },
+  {
+    "markdown": "|not a spoiler|",
+    "html": "|not a spoiler|"
+  },
+  {
+    "markdown": "|||three|||",
+    "html": "|||three|||"
+  },
+  {
+    "markdown": "test ||reason|**bar**||",
+    "html": "test <span data-mx-spoiler=\"reason\"><strong>bar</strong></span>"
+  },
+  {
+    "markdown": "test ||reason|[bar](https://example.com)||",
+    "html": "test <span data-mx-spoiler=\"reason\"><a href=\"https://example.com\">bar</a></span>"
+  },
+  {
+    "markdown": "test [||reason|foo||](https://example.com)",
+    "html": "test <a href=\"https://example.com\"><span data-mx-spoiler=\"reason\">foo</span></a>"
+  },
+  {
+    "markdown": "test [||_foo_||](https://example.com)",
+    "html": "test <a href=\"https://example.com\"><span data-mx-spoiler><em>foo</em></span></a>"
+  },
+  {
+    "markdown": "test **||foo||**",
+    "html": "test <strong><span data-mx-spoiler>foo</span></strong>"
+  },
+  {
+    "markdown": "* ||foo||",
+    "html": "<ul>\n<li><span data-mx-spoiler>foo</span></li>\n</ul>"
+  },
+  {
+    "markdown": "> ||foo||",
+    "html": "<blockquote>\n<p><span data-mx-spoiler>foo</span></p>\n</blockquote>"
+  },
+  {
+    "markdown": "a \\||test||",
+    "html": "a ||test||"
+  },
+  {
+    "markdown": "\\~~test~~",
+    "html": "~~test~~"
+  },
+  {
+    "markdown": "\\*test* hmm",
+    "html": "*test* hmm"
+  },
+  {
+    "markdown": "`code`",
+    "html": "<code>code</code>"
+  },
+  {
+    "markdown": "`**x**`",
+    "html": "<code>**x**</code>"
+  },
+  {
+    "markdown": "``a ` b``",
+    "html": "<code>a ` b</code>"
+  },
+  {
+    "markdown": "```kotlin\nval x = 1\n```",
+    "html": "<pre><code class=\"language-kotlin\">val x = 1\n</code></pre>"
+  },
+  {
+    "markdown": "```\na\n\nb\n```",
+    "html": "<pre><code>a\n\nb\n</code></pre>"
+  },
+  {
+    "markdown": "```Chemistry:\nH2O\n```",
+    "html": "<pre><code>Chemistry:\nH2O\n</code></pre>"
+  },
+  {
+    "markdown": "```python extra\nx\n```",
+    "html": "<pre><code>python extra\nx\n</code></pre>"
+  },
+  {
+    "markdown": "```foo\nbar```",
+    "html": "<pre><code class=\"language-foo\">bar\n</code></pre>"
+  },
+  {
+    "markdown": "```\na\nb ```",
+    "html": "<pre><code>a\nb \n</code></pre>"
+  },
+  {
+    "markdown": "```\nunclosed",
+    "html": "```<br>\nunclosed"
+  },
+  {
+    "markdown": "~~~\nunclosed",
+    "html": "<pre><code>unclosed\n</code></pre>"
+  },
+  {
+    "markdown": "> ```\n> x\n> ```",
+    "html": "<blockquote>\n<pre><code>x\n</code></pre>\n</blockquote>"
+  },
+  {
+    "markdown": "    indented",
+    "html": "indented"
+  },
+  {
+    "markdown": "<b>x</b> & <script>",
+    "html": "&lt;b&gt;x&lt;/b&gt; &amp; &lt;script&gt;"
+  },
+  {
+    "markdown": "a < b > c",
+    "html": "a &lt; b &gt; c"
+  },
+  {
+    "markdown": "[site](https://example.org/)",
+    "html": "<a href=\"https://example.org/\">site</a>"
+  },
+  {
+    "markdown": "[site](https://example.org/ \"title\")",
+    "html": "<a href=\"https://example.org/\" title=\"title\">site</a>"
+  },
+  {
+    "markdown": "<https://example.org/>",
+    "html": "<a href=\"https://example.org/\">https://example.org/</a>"
+  },
+  {
+    "markdown": "https://example.org/ and www.example.org",
+    "html": "https://example.org/ and www.example.org"
+  },
+  {
+    "markdown": "<foo@example.org>",
+    "html": "<a href=\"mailto:foo@example.org\">foo@example.org</a>"
+  },
+  {
+    "markdown": "![alt](https://example.org/img.png)",
+    "html": "<img src=\"https://example.org/img.png\" alt=\"alt\">"
+  },
+  {
+    "markdown": "![:meow:](mxc://example.com/emoji.png \"Emoji: meow\")",
+    "html": "<img src=\"mxc://example.com/emoji.png\" alt=\"meow\" title=\"meow\" data-mx-emoticon height=\"32\">"
+  },
+  {
+    "markdown": "> quoted\n> more",
+    "html": "<blockquote>\n<p>quoted<br>\nmore</p>\n</blockquote>"
+  },
+  {
+    "markdown": "> a\n>\n> b",
+    "html": "<blockquote>\n<p>a</p>\n<p>b</p>\n</blockquote>"
+  },
+  {
+    "markdown": "> outer\n> > inner",
+    "html": "<blockquote>\n<p>outer</p>\n<blockquote>\n<p>inner</p>\n</blockquote>\n</blockquote>"
+  },
+  {
+    "markdown": "> quote\n\nafter",
+    "html": "<blockquote>\n<p>quote</p>\n</blockquote>\n<p>after</p>"
+  },
+  {
+    "markdown": "# Title",
+    "html": "<h1>Title</h1>"
+  },
+  {
+    "markdown": "## Title",
+    "html": "<h2>Title</h2>"
+  },
+  {
+    "markdown": "###### Six",
+    "html": "<h6>Six</h6>"
+  },
+  {
+    "markdown": "####### Seven",
+    "html": "####### Seven"
+  },
+  {
+    "markdown": "title\n---",
+    "html": "<p>title</p>\n<hr>"
+  },
+  {
+    "markdown": "title\n===",
+    "html": "title<br>\n==="
+  },
+  {
+    "markdown": "***",
+    "html": "<hr>"
+  },
+  {
+    "markdown": "---",
+    "html": "<hr>"
+  },
+  {
+    "markdown": "- a\n- b",
+    "html": "<ul>\n<li>a</li>\n<li>b</li>\n</ul>"
+  },
+  {
+    "markdown": "* a\n* b",
+    "html": "<ul>\n<li>a</li>\n<li>b</li>\n</ul>"
+  },
+  {
+    "markdown": "+ a\n+ b",
+    "html": "+ a<br>\n+ b"
+  },
+  {
+    "markdown": "- a\n  - nested\n- b",
+    "html": "<ul>\n<li>a\n<ul>\n<li>nested</li>\n</ul>\n</li>\n<li>b</li>\n</ul>"
+  },
+  {
+    "markdown": "- a\n\n- b",
+    "html": "<ul>\n<li>\n<p>a</p>\n</li>\n<li>\n<p>b</p>\n</li>\n</ul>"
+  },
+  {
+    "markdown": "1. a\n2. b",
+    "html": "<ol>\n<li>a</li>\n<li>b</li>\n</ol>"
+  },
+  {
+    "markdown": "3. a\n4. b",
+    "html": "<ol start=\"3\">\n<li>a</li>\n<li>b</li>\n</ol>"
+  },
+  {
+    "markdown": "1. a\n5. b\n6. c",
+    "html": "<ol>\n<li>a</li>\n<li value=\"5\">b</li>\n<li>c</li>\n</ol>"
+  },
+  {
+    "markdown": "1) a\n2) b",
+    "html": "<ol>\n<li>a</li>\n<li>b</li>\n</ol>"
+  },
+  {
+    "markdown": "1. a\n- b",
+    "html": "<ol>\n<li>a</li>\n</ol>\n<ul>\n<li>b</li>\n</ul>"
+  },
+  {
+    "markdown": "- [ ] task\n- [x] done",
+    "html": "<ul>\n<li>[ ] task</li>\n<li>[x] done</li>\n</ul>"
+  },
+  {
+    "markdown": "| a | b |\n|---|---|\n| 1 | 2 |",
+    "html": "<table>\n<thead>\n<tr>\n<th>a</th>\n<th>b</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td>2</td>\n</tr>\n</tbody>\n</table>"
+  },
+  {
+    "markdown": "| a | b |\n|:--|--:|\n| 1 |",
+    "html": "<table>\n<thead>\n<tr>\n<th>a</th>\n<th>b</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td></td>\n</tr>\n</tbody>\n</table>"
+  },
+  {
+    "markdown": "a|b",
+    "html": "a|b"
+  },
+  {
+    "markdown": "line one\nline two\n\n- list\n- items\n\n> quote",
+    "html": "<p>line one<br>\nline two</p>\n<ul>\n<li>list</li>\n<li>items</li>\n</ul>\n<blockquote>\n<p>quote</p>\n</blockquote>"
+  },
+  {
+    "markdown": "and \\\nbackslash break",
+    "html": "and <br>\nbackslash break"
+  },
+  {
+    "markdown": "\\*not emphasis\\* and \\\\ backslash",
+    "html": "*not emphasis* and \\ backslash"
+  },
+  {
+    "markdown": "a_b_c and snake_case_word",
+    "html": "a_b_c and snake_case_word"
+  },
+  {
+    "markdown": "**unclosed bold",
+    "html": "**unclosed bold"
+  },
+  {
+    "markdown": "*a **b** c*",
+    "html": "<em>a <strong>b</strong> c</em>"
+  },
+  {
+    "markdown": "`a **b** c`",
+    "html": "<code>a **b** c</code>"
+  },
+  {
+    "markdown": "&amp; &lt; &copy; &#35;",
+    "html": "&amp; &lt; © #"
+  },
+  {
+    "markdown": "<!-- comment -->",
+    "html": "&lt;!-- comment --&gt;"
+  },
+  {
+    "markdown": "<div>block</div>\ntext",
+    "html": "&lt;div&gt;block&lt;/div&gt;<br>text"
+  },
+  {
+    "markdown": "<span>inline</span> text",
+    "html": "&lt;span&gt;inline&lt;/span&gt; text"
+  },
+  {
+    "markdown": "Trailing newline",
+    "html": "Trailing newline"
+  }
+]

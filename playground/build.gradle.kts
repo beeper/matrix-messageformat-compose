@@ -13,6 +13,8 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(project(":messageformat"))
+                implementation(project(":markdown"))
+                implementation(project(":composer"))
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.material3)

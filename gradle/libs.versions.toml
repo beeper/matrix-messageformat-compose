@@ -21,6 +21,7 @@ core = { group = "androidx.test", name = "core", version.ref = "core" }
 jsoup = "org.jsoup:jsoup:1.23.2"
 htmlcompressor = { module = "com.googlecode.htmlcompressor:htmlcompressor", version = "1.5.2" }
 kermit = "co.touchlab:kermit:2.2.0"
+jetbrains-markdown = { module = "org.jetbrains:markdown", version = "0.7.18" }
 
 
 [plugins]

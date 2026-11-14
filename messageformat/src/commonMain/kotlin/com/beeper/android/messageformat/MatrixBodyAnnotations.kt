@@ -32,6 +32,8 @@ object MatrixBodyAnnotations {
     const val INLINE_TABLE_PREFIX = "mx:TABLE:"
     const val INLINE_CODE_BLOCK_PREFIX = "mx:CODE:"
     const val CLICK_TO_REVEAL = "mx:CLICK_TO_REVEAL"
+    /** Markup characters of a formatting syntax, e.g. markdown delimiters, when the source is shown unrendered. */
+    const val SYNTAX_MARKER = "mx:SYNTAX_MARKER"
 }
 
 /**
