@@ -156,6 +156,29 @@ class MatrixMarkdownTextFieldStateTest {
     }
 
     @Test
+    fun undoingADeletedPillBringsItBackAfterALotOfTyping() {
+        val state = state()
+        state.edit { replace(8, 9, ""); selection = TextRange(8) }
+        repeat(300) { state.edit { replace(length, length, "a") } }
+        // The undo history keeps fewer steps than this unless it merges them, as it does for typed text
+        state.textFieldState.edit { replace(0, length, "hi  there") }
+        state.assertState("hi  there")
+        state.textFieldState.edit { replace(0, length, "hi @Alice there") }
+        state.assertState("hi @Alice there", alice(3, 9))
+    }
+
+    @Test
+    fun undoNeverBringsBackAPillThatWasTypedOverSince() {
+        val state = state("@Alice", alice(0, 6))
+        state.edit { replace(3, 3, "x") }
+        state.edit { replace(3, 4, "") }
+        state.assertState("@Alice")
+        state.edit { replace(6, 6, "!") }
+        state.undoState.undo()
+        state.assertState("@Alice")
+    }
+
+    @Test
     fun editRightAfterUndoStartsFromTheRealignedEntities() {
         val state = state()
         state.edit { replace(0, 0, "oh ") }

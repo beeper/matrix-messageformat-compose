@@ -360,12 +360,12 @@ fun TextRenderScreen() {
             if (markdownInput) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = {
-                        composerState.insertEntity(composerState.textFieldState.selection, "@Alice") { start, end ->
+                        composerState.insertEntity(composerState.selection, "@Alice") { start, end ->
                             MatrixInlineEntity.UserMention(start, end, "@alice:example.org")
                         }
                     }) { Text("Insert mention") }
                     TextButton(onClick = {
-                        composerState.insertEntity(composerState.textFieldState.selection, ":example_emote:") { start, end ->
+                        composerState.insertEntity(composerState.selection, ":example_emote:") { start, end ->
                             MatrixInlineEntity.CustomEmote(start, end, "example_emote", "mxc://local.beeper.com/spiritcroc_TnTnE9q1fOXD0gtA9UlcBrStvCVLWwAbAtKcAIOKqWJRtQeZwsniGSRVA8xV51tB")
                         }
                     }) { Text("Insert custom emote") }
