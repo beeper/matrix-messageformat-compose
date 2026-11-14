@@ -140,6 +140,15 @@ class MatrixMarkdownTextFieldStateTest {
     }
 
     @Test
+    fun undoingOneOfTwoEqualPillsKeepsOnlyOne() {
+        val state = state("@Alice", alice(0, 6))
+        state.setContent("@Alice@Alice", listOf(alice(0, 6), alice(6, 12)))
+        state.textFieldState.undoState.undo()
+        state.reconcileUnobservedEdits()
+        state.assertState("@Alice", alice(0, 6))
+    }
+
+    @Test
     fun wholeTextReplacementKeepsEntitiesInUnchangedText() {
         val state = state()
         state.edit { replace(0, length, "hi @Alice there!") }

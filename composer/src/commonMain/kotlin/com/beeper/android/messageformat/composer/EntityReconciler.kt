@@ -24,8 +24,8 @@ internal object EntityReconciler {
 
         val kept = mutableListOf<MatrixInlineEntity>()
         val remainders = mutableListOf<TextRange>()
-        for (entity in entities) {
-            when (val outcome = outcomeFor(entity, edit)) {
+        for ((entity, outcome) in entities.zip(outcomesFor(entities, edit))) {
+            when (outcome) {
                 is Outcome.Moved -> kept += entity.moved(outcome.start, outcome.end)
                 // Nothing is left to delete when the change removed the whole entity
                 is Outcome.Deleted -> if (!outcome.remainder.collapsed && !outcome.remainder.reversed) {
@@ -61,8 +61,8 @@ internal object EntityReconciler {
         after: CharSequence,
     ): List<MatrixInlineEntity> {
         val edit = Edit(listOf(Change(TextRange(0, before.length), TextRange(0, after.length))), before, after)
-        return entities.mapNotNull { entity ->
-            (outcomeFor(entity, edit) as? Outcome.Moved)?.let { entity.moved(it.start, it.end) }
+        return entities.zip(outcomesFor(entities, edit)).mapNotNull { (entity, outcome) ->
+            (outcome as? Outcome.Moved)?.let { entity.moved(it.start, it.end) }
         }
     }
 
@@ -112,10 +112,17 @@ internal object EntityReconciler {
         data object PlainText : Outcome
     }
 
-    // A narrowing may spare an entity, but only the recorded range decides what a cut deletes
-    private fun outcomeFor(entity: MatrixInlineEntity, edit: Edit): Outcome =
-        edit.narrowings.firstNotNullOfOrNull { outcomeFor(entity, it) as? Outcome.Moved }
-            ?: outcomeFor(entity, edit.recorded)
+    /**
+     * The narrowing that spares the most entities decides which survive. Using one reading for all entities
+     * keeps two equal neighbours from both claiming the same text. Only the recorded range decides what a
+     * cut deletes.
+     */
+    private fun outcomesFor(entities: List<MatrixInlineEntity>, edit: Edit): List<Outcome> {
+        val spared = edit.narrowings
+            .map { narrowing -> entities.map { outcomeFor(it, narrowing) as? Outcome.Moved } }
+            .maxBy { moved -> moved.count { it != null } }
+        return entities.mapIndexed { index, entity -> spared[index] ?: outcomeFor(entity, edit.recorded) }
+    }
 
     private fun outcomeFor(entity: MatrixInlineEntity, changes: List<Change>): Outcome {
         var shift = 0
