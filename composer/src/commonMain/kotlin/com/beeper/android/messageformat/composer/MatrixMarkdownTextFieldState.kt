@@ -29,6 +29,9 @@ class MatrixMarkdownTextFieldState(
 
     internal var sourceFormatter: MarkdownSourceFormatter? = null
 
+    /** The text [entities] were last aligned with, to notice edits that bypass [inputTransformation]. */
+    private var reconciledText: String = initialText
+
     val text: CharSequence get() = textFieldState.text
 
     val inputTransformation: InputTransformation = InputTransformation { update() }
@@ -42,6 +45,15 @@ class MatrixMarkdownTextFieldState(
 
     internal fun refreshFormatting() {
         textFieldState.edit { applyFormatting() }
+    }
+
+    /** Realigns [entities] after edits that skipped [inputTransformation], such as undo and redo. */
+    internal fun reconcileUnobservedEdits() {
+        if (textFieldState.text.contentEquals(reconciledText)) return
+        textFieldState.edit {
+            entities = EntityReconciler.reconcileUnobserved(entities, reconciledText, asCharSequence())
+            finishEdit()
+        }
     }
 
     /**
@@ -65,7 +77,7 @@ class MatrixMarkdownTextFieldState(
                 if (it.start >= start) it.moved(it.start + inserted.length, it.end + inserted.length) else it
             }
             entities = (shifted + entity(start, start + visibleText.length)).sortedBy { it.start }
-            applyFormatting()
+            finishEdit()
             selection = TextRange(start + inserted.length)
         }
     }
@@ -86,7 +98,7 @@ class MatrixMarkdownTextFieldState(
                 selection.start.coerceIn(0, text.length),
                 selection.end.coerceIn(0, text.length),
             )
-            applyFormatting()
+            finishEdit()
         }
     }
 
@@ -95,6 +107,11 @@ class MatrixMarkdownTextFieldState(
 
     private fun TextFieldBuffer.update() {
         entities = reconcile(entities)
+        finishEdit()
+    }
+
+    private fun TextFieldBuffer.finishEdit() {
+        reconciledText = asCharSequence().toString()
         applyFormatting()
     }
 

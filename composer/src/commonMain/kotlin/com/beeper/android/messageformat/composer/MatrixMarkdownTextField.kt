@@ -75,6 +75,7 @@ fun MatrixMarkdownTextField(
             state.sourceFormatter = sourceFormatter
             state.refreshFormatting()
         }
+        state.reconcileUnobservedEdits()
     }
 
     val density = LocalDensity.current

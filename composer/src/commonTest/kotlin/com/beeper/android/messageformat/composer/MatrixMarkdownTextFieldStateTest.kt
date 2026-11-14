@@ -98,7 +98,32 @@ class MatrixMarkdownTextFieldStateTest {
     }
 
     @Test
-    fun wholeTextReplacementRelocatesEntities() {
+    fun pastingOverEverythingNeverCreatesMentions() {
+        val state = state("@Alice", alice(0, 6))
+        state.edit { replace(0, length, "ask @Alice about it") }
+        state.assertState("ask @Alice about it")
+    }
+
+    @Test
+    fun undoRealignsEntities() {
+        val state = state()
+        state.edit { replace(0, 0, "oh ") }
+        state.textFieldState.undoState.undo()
+        state.reconcileUnobservedEdits()
+        state.assertState("hi @Alice there", alice(3, 9))
+    }
+
+    @Test
+    fun undoingAnInsertedEntityDropsItAndKeepsTheText() {
+        val state = MatrixMarkdownTextFieldState("hey @al")
+        state.insertEntity(TextRange(4, 7), "@Alice") { start, end -> alice(start, end) }
+        state.textFieldState.undoState.undo()
+        state.reconcileUnobservedEdits()
+        state.assertState("hey @al")
+    }
+
+    @Test
+    fun wholeTextReplacementKeepsEntitiesInUnchangedText() {
         val state = state()
         state.edit { replace(0, length, "hi @Alice there!") }
         state.assertState("hi @Alice there!", alice(3, 9))
