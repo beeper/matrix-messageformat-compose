@@ -9,22 +9,23 @@ import kotlin.math.min
 /**
  * Updates [MatrixInlineEntity] ranges after an edit of a [TextFieldBuffer]: entities move with the
  * text, a deletion into an entity removes it whole, and text typed inside one turns it into plain text.
- * Only the characters an edit actually changes count, so rewriting text to itself leaves entities alone.
+ * Entities whose characters an edit leaves intact survive it, e.g. when a keyboard rewrites the whole text.
  */
 internal object EntityReconciler {
 
     fun TextFieldBuffer.reconcile(entities: List<MatrixInlineEntity>): List<MatrixInlineEntity> {
         if (entities.isEmpty()) return entities
-        val changes = changes()
-        if (changes.isEmpty()) {
+        if (changes.changeCount == 0) {
             moveCursorOutOf(entities)
             return entities
         }
+        val recorded = (0 until changes.changeCount).map { Change(changes.getOriginalRange(it), changes.getRange(it)) }
+        val edit = Edit(recorded, originalText, asCharSequence())
 
         val kept = mutableListOf<MatrixInlineEntity>()
         val remainders = mutableListOf<TextRange>()
         for (entity in entities) {
-            when (val outcome = outcomeFor(entity, changes)) {
+            when (val outcome = outcomeFor(entity, edit)) {
                 is Outcome.Moved -> kept += entity.moved(outcome.start, outcome.end)
                 // Nothing is left to delete when the change removed the whole entity
                 is Outcome.Deleted -> if (!outcome.remainder.collapsed && !outcome.remainder.reversed) {
@@ -51,40 +52,47 @@ internal object EntityReconciler {
     }
 
     /**
-     * Updates [entities] for [before] having become [after] through edits that were not observed, such as undo.
-     * Entities the edit cut into are dropped, as the text must stay exactly as it is.
+     * [reconcile] for an edit that was not observed, such as undo. Touched entities are dropped, but their
+     * text stays.
      */
     fun reconcileUnobserved(
         entities: List<MatrixInlineEntity>,
         before: CharSequence,
         after: CharSequence,
     ): List<MatrixInlineEntity> {
-        val changes = listOfNotNull(
-            Change(TextRange(0, before.length), TextRange(0, after.length)).narrowed(before, after),
-        )
+        val edit = Edit(listOf(Change(TextRange(0, before.length), TextRange(0, after.length))), before, after)
         return entities.mapNotNull { entity ->
-            (outcomeFor(entity, changes) as? Outcome.Moved)?.let { entity.moved(it.start, it.end) }
+            (outcomeFor(entity, edit) as? Outcome.Moved)?.let { entity.moved(it.start, it.end) }
         }
     }
 
     private class Change(val original: TextRange, val updated: TextRange)
 
-    private fun TextFieldBuffer.changes(): List<Change> {
-        val text = asCharSequence()
-        return (0 until changes.changeCount).mapNotNull { index ->
-            Change(changes.getOriginalRange(index), changes.getRange(index)).narrowed(originalText, text)
+    /**
+     * An edit as [recorded], and narrowed to the characters it really changes. Narrowing can be ambiguous,
+     * like which "A" was removed from "AA", so both readings are kept.
+     */
+    private class Edit(val recorded: List<Change>, before: CharSequence, after: CharSequence) {
+        val narrowings: List<List<Change>> = listOf(true, false).map { prefixFirst ->
+            recorded.mapNotNull { it.narrowed(before, after, prefixFirst) }
         }
     }
 
-    /** This change without the characters it leaves as they were, or null if it changes nothing. */
-    private fun Change.narrowed(before: CharSequence, after: CharSequence): Change? {
+    /** This change minus its unchanged leading and trailing characters, or null if nothing changed. */
+    private fun Change.narrowed(before: CharSequence, after: CharSequence, prefixFirst: Boolean): Change? {
         val maxCommon = min(original.length, updated.length)
-        var prefix = 0
-        while (prefix < maxCommon && before[original.start + prefix] == after[updated.start + prefix]) prefix++
-        var suffix = 0
-        while (suffix < maxCommon - prefix && before[original.end - 1 - suffix] == after[updated.end - 1 - suffix]) {
-            suffix++
+        fun commonPrefix(limit: Int): Int {
+            var length = 0
+            while (length < limit && before[original.start + length] == after[updated.start + length]) length++
+            return length
         }
+        fun commonSuffix(limit: Int): Int {
+            var length = 0
+            while (length < limit && before[original.end - 1 - length] == after[updated.end - 1 - length]) length++
+            return length
+        }
+        val prefix = if (prefixFirst) commonPrefix(maxCommon) else commonPrefix(maxCommon - commonSuffix(maxCommon))
+        val suffix = commonSuffix(maxCommon - prefix)
         val narrowed = Change(
             TextRange(original.start + prefix, original.end - suffix),
             TextRange(updated.start + prefix, updated.end - suffix),
@@ -103,6 +111,11 @@ internal object EntityReconciler {
         data class Deleted(val remainder: TextRange) : Outcome
         data object PlainText : Outcome
     }
+
+    // A narrowing may spare an entity, but only the recorded range decides what a cut deletes
+    private fun outcomeFor(entity: MatrixInlineEntity, edit: Edit): Outcome =
+        edit.narrowings.firstNotNullOfOrNull { outcomeFor(entity, it) as? Outcome.Moved }
+            ?: outcomeFor(entity, edit.recorded)
 
     private fun outcomeFor(entity: MatrixInlineEntity, changes: List<Change>): Outcome {
         var shift = 0

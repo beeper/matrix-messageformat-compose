@@ -105,6 +105,25 @@ class MatrixMarkdownTextFieldStateTest {
     }
 
     @Test
+    fun pastingOverAPillNeverDeletesPastedText() {
+        val state = state("hi @Alice", alice(3, 9))
+        state.edit { replace(0, length, "hi @Bob") }
+        state.assertState("hi @Bob")
+        val repeated = state("A@Alice", alice(1, 7))
+        repeated.edit { replace(0, length, "@Alice") }
+        repeated.assertState("@Alice", alice(0, 6))
+    }
+
+    @Test
+    fun undoKeepsAPillThatStartsLikeTheUndoneText() {
+        val state = state("@Alice", alice(0, 6))
+        state.edit { replace(0, 0, "@") }
+        state.textFieldState.undoState.undo()
+        state.reconcileUnobservedEdits()
+        state.assertState("@Alice", alice(0, 6))
+    }
+
+    @Test
     fun undoRealignsEntities() {
         val state = state()
         state.edit { replace(0, 0, "oh ") }

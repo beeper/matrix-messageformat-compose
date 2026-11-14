@@ -29,7 +29,7 @@ class MatrixMarkdownTextFieldState(
 
     internal var sourceFormatter: MarkdownSourceFormatter? = null
 
-    /** The text [entities] were last aligned with, to notice edits that bypass [inputTransformation]. */
+    /** The text [entities] last matched, to detect edits that bypass [inputTransformation]. */
     private var reconciledText: String = initialText
 
     val text: CharSequence get() = textFieldState.text
@@ -47,7 +47,7 @@ class MatrixMarkdownTextFieldState(
         textFieldState.edit { applyFormatting() }
     }
 
-    /** Realigns [entities] after edits that skipped [inputTransformation], such as undo and redo. */
+    /** Realigns [entities] after edits that bypass [inputTransformation], such as undo. */
     internal fun reconcileUnobservedEdits() {
         if (textFieldState.text.contentEquals(reconciledText)) return
         textFieldState.edit {
@@ -68,7 +68,7 @@ class MatrixMarkdownTextFieldState(
         textFieldState.edit {
             replace(replaced.min, replaced.max, "")
             selection = TextRange(replaced.min)
-            // Reconciling may remove leftovers of cut entities, which moves the cursor to where the entity goes
+            // Reconciling may delete what is left of a cut entity, moving the cursor to the insertion point
             val kept = reconcile(entities)
             val start = selection.start
             val inserted = "$visibleText "
