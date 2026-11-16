@@ -2,12 +2,15 @@ package com.beeper.android.messageformat.markdown
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import com.beeper.android.messageformat.MatrixBodyAnnotations
 import com.beeper.android.messageformat.MatrixBodyParseResult
+import com.beeper.android.messageformat.MatrixBodyPreFormatStyle
+import com.beeper.android.messageformat.addAutoLinkAnnotations
 import com.beeper.android.messageformat.SpanAttributes
 import kotlinx.serialization.json.Json
 import org.intellij.markdown.IElementType
@@ -22,16 +25,38 @@ import org.intellij.markdown.parser.LinkMap
 /**
  * Annotates markdown source with its formatting, keeping every character in place.
  */
-internal class MarkdownSourceAnnotator(private val features: Set<MarkdownFeature>) {
+internal class MarkdownSourceAnnotator(
+    private val features: Set<MarkdownFeature>,
+    private val preFormatStyle: MatrixBodyPreFormatStyle,
+) {
 
-    /** Annotates [markdown] by [tree], which was parsed from [parsed], a copy with entities masked. */
-    fun annotate(markdown: String, tree: ASTNode, parsed: String = markdown): MatrixBodyParseResult {
+    /** Annotates [markdown] by [tree], which was parsed from [parsed], a copy with [entities] masked. */
+    fun annotate(
+        markdown: String,
+        tree: ASTNode,
+        parsed: String = markdown,
+        entities: List<MatrixInlineEntity> = emptyList(),
+    ): MatrixBodyParseResult {
         val expandableItems = mutableSetOf<Int>()
         val text = buildAnnotatedString {
             append(markdown)
-            Visitor(this, parsed, expandableItems).visit(tree)
+            val visitor = Visitor(this, parsed, expandableItems)
+            visitor.visit(tree)
+            val autoLinkExcluded = visitor.autoLinkExcluded + entities.map { TextRange(it.start, it.end) }
+            autoLinkRuns(markdown.length, autoLinkExcluded).forEach { run ->
+                addAutoLinkAnnotations(markdown.substring(run.start, run.end), run.start, preFormatStyle)
+            }
         }
         return MatrixBodyParseResult(text = text, expandableItems = expandableItems)
+    }
+
+    private fun autoLinkRuns(length: Int, autoLinkExcluded: List<TextRange>): List<TextRange> = buildList {
+        var runStart = 0
+        for (range in autoLinkExcluded.sortedBy { it.start }) {
+            if (range.start > runStart) add(TextRange(runStart, range.start))
+            runStart = maxOf(runStart, range.end)
+        }
+        if (runStart < length) add(TextRange(runStart, length))
     }
 
     private inner class Visitor(
@@ -39,7 +64,10 @@ internal class MarkdownSourceAnnotator(private val features: Set<MarkdownFeature
         private val source: String,
         private val expandableItems: MutableSet<Int>,
     ) {
+        val autoLinkExcluded = mutableListOf<TextRange>()
+
         fun visit(node: ASTNode) {
+            if (node.type in AUTO_LINK_EXCLUDED) autoLinkExcluded += TextRange(node.startOffset, node.endOffset)
             when (node.type) {
                 MarkdownElementTypes.STRONG -> emphasis(node, MarkdownFeature.BOLD, BOLD, markerTokens = 2)
                 MarkdownElementTypes.EMPH -> emphasis(node, MarkdownFeature.ITALIC, ITALIC, markerTokens = 1)
@@ -158,7 +186,10 @@ internal class MarkdownSourceAnnotator(private val features: Set<MarkdownFeature
 
         private fun marker(node: ASTNode) = markerRange(node.startOffset, node.endOffset)
 
-        private fun markerRange(start: Int, end: Int) = annotate(MatrixBodyAnnotations.SYNTAX_MARKER, "", start, end)
+        private fun markerRange(start: Int, end: Int) {
+            if (start < end) autoLinkExcluded += TextRange(start, end)
+            annotate(MatrixBodyAnnotations.SYNTAX_MARKER, "", start, end)
+        }
 
         private fun annotate(tag: String, value: String, start: Int, end: Int) {
             if (start < end) builder.addStringAnnotation(tag, value, start, end)
@@ -175,6 +206,14 @@ internal class MarkdownSourceAnnotator(private val features: Set<MarkdownFeature
             MarkdownTokenTypes.LIST_NUMBER,
             MarkdownTokenTypes.HORIZONTAL_RULE,
             GFMTokenTypes.TABLE_SEPARATOR,
+        )
+
+        val AUTO_LINK_EXCLUDED: Set<IElementType> = setOf(
+            MarkdownElementTypes.INLINE_LINK,
+            MarkdownElementTypes.AUTOLINK,
+            MarkdownElementTypes.IMAGE,
+            MarkdownElementTypes.CODE_SPAN,
+            MarkdownElementTypes.CODE_FENCE,
         )
 
         val FENCE_MARKER_TOKENS: Set<IElementType> = setOf(

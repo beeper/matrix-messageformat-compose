@@ -13,7 +13,6 @@ import androidx.compose.ui.text.withAnnotation
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.em
 import co.touchlab.kermit.Logger
-import com.beeper.android.messageformat.MatrixPatterns.MATRIX_TO_LINK_PREFIX
 import com.googlecode.htmlcompressor.compressor.HtmlCompressor
 import kotlinx.collections.immutable.toPersistentMap
 import kotlinx.collections.immutable.toPersistentSet
@@ -261,114 +260,7 @@ class MatrixHtmlParser(
 
         // Auto-linkification
         if (ctx.linkUrl == null && !ctx.preFormattedText && !ctx.inCodeBlock) {
-            // Avoid adding overlapping links
-            val linkedRanges = mutableListOf<Pair<Int, Int>>()
-            fun overlapsExistingLink(start: Int, end: Int): Boolean {
-                return linkedRanges.any { (existingStart, existingEnd) ->
-                    start < existingEnd && end > existingStart
-                }
-            }
-
-            // Auto-linkification of email addresses
-            if (ctx.style.autoLinkEmailAddressPattern != null) {
-                val matcher = ctx.style.autoLinkEmailAddressPattern.matcher(text)
-                while (matcher.find()) {
-                    val startInText = matcher.start()
-                    val endInText = matcher.end()
-                    val emailAddress = text.substring(startInText, endInText)
-                    addStringAnnotation(
-                        MatrixBodyAnnotations.MAIL_ADDRESS,
-                        emailAddress,
-                        appendStart + startInText,
-                        appendStart + endInText,
-                    )
-                    linkedRanges += startInText to endInText
-                }
-            }
-
-            // Auto-linkification of matrix: URIs, which are not covered by generic web URL patterns.
-            val matrixUriMatcher = MatrixPatterns.MATRIX_URI_PATTERN.matcher(text)
-            while (matrixUriMatcher.find()) {
-                val startInText = matrixUriMatcher.start()
-                val matchedUrl = matrixUriMatcher.group()
-                val url = matchedUrl.trimEnd('.', ',', ';', '!', '?', ')', ']', '}', '>')
-                val endInText = startInText + url.length
-                if (url.isEmpty() || overlapsExistingLink(startInText, endInText)) {
-                    continue
-                }
-                val matrixLink = MatrixPatterns.parseMatrixLink(url, isAutoLink = true) ?: continue
-                val tag = when (matrixLink) {
-                    is MatrixToLink.UserMention -> MatrixBodyAnnotations.USER_MENTION
-                    is MatrixToLink.RoomLink -> MatrixBodyAnnotations.ROOM_LINK
-                    is MatrixToLink.MessageLink -> MatrixBodyAnnotations.MESSAGE_LINK
-                }
-                addStringAnnotation(
-                    tag,
-                    Json.encodeToString(matrixLink),
-                    appendStart + startInText,
-                    appendStart + endInText,
-                )
-                linkedRanges += startInText to endInText
-            }
-
-            val roomAliasMatches = MatrixPatterns.ROOM_ALIAS_LINKIFY_REGEX.findAll(text).toList()
-
-            // Auto-linkification of hyperlinks
-            if (ctx.style.autoLinkUrlPattern != null) {
-                val matcher = ctx.style.autoLinkUrlPattern.matcher(text)
-                while (matcher.find()) {
-                    val startInText = matcher.start()
-                    val endInText = matcher.end()
-                    if (overlapsExistingLink(startInText, endInText)) {
-                        continue
-                    }
-                    // Android's web URL pattern matches bare domains, including the server part of room aliases.
-                    // Prefer the complete alias, but keep URLs that extend beyond it intact.
-                    if (roomAliasMatches.any { startInText >= it.range.first && endInText <= it.range.last + 1 }) {
-                        continue
-                    }
-                    val url = text.substring(startInText, endInText)
-                    // Handle matrix.to links specifically for user mentions and room / message links
-                    val matrixLink = MatrixPatterns.parseMatrixLink(url, isAutoLink = true)
-                    // Custom formatting of auto-linked url contents disabled for now -
-                    // let's call it a feature, maybe it wasn't supposed to be a link?
-                    val tag = when (matrixLink) {
-                        is MatrixToLink.UserMention -> MatrixBodyAnnotations.USER_MENTION
-                        is MatrixToLink.RoomLink -> MatrixBodyAnnotations.ROOM_LINK
-                        is MatrixToLink.MessageLink -> MatrixBodyAnnotations.MESSAGE_LINK
-                        null -> MatrixBodyAnnotations.WEB_LINK
-                    }
-                    addStringAnnotation(
-                        tag,
-                        matrixLink?.let { Json.encodeToString(it) } ?: url,
-                        appendStart + startInText,
-                        appendStart + endInText,
-                    )
-                    linkedRanges += startInText to endInText
-                }
-            }
-
-            // Auto-linkify room aliases in plaintext as well (except in code/pre blocks)
-            roomAliasMatches.forEach { match ->
-                val startInText = match.range.first
-                val endInText = match.range.last + 1
-                if (overlapsExistingLink(startInText, endInText)) {
-                    return@forEach
-                }
-                val roomLink: MatrixToLink =
-                    MatrixToLink.RoomLink(
-                        roomId = match.value,
-                        via = null,
-                        rawUrl = "$MATRIX_TO_LINK_PREFIX${match.value.replace("#", "%23")}",
-                    )
-                addStringAnnotation(
-                    MatrixBodyAnnotations.ROOM_LINK,
-                    Json.encodeToString(roomLink),
-                    appendStart + startInText,
-                    appendStart + endInText,
-                )
-                linkedRanges += startInText to endInText
-            }
+            addAutoLinkAnnotations(text, appendStart, ctx.style)
         }
         return text
     }

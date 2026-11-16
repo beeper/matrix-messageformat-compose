@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
 import com.beeper.android.messageformat.MatrixBodyDrawStyle
+import com.beeper.android.messageformat.MatrixBodyPreFormatStyle
 import com.beeper.android.messageformat.MatrixBodyStyledFormatter
 import com.beeper.android.messageformat.drawMatrixBodyBackgrounds
 import com.beeper.android.messageformat.matrixFormatOnTextRenderResult
@@ -58,6 +59,7 @@ fun MatrixMarkdownTextField(
     modifier: Modifier = Modifier,
     features: Set<MarkdownFeature> = MarkdownFeature.ALL,
     textStyle: TextStyle = TextStyle.Default,
+    preFormatStyle: MatrixBodyPreFormatStyle = remember { MatrixBodyPreFormatStyle() },
     formatter: MatrixBodyStyledFormatter = defaultMatrixComposerStyledFormatter(textStyle),
     drawStyle: MatrixBodyDrawStyle = remember { MatrixBodyDrawStyle() },
     emote: (@Composable (MatrixInlineEntity.CustomEmote) -> Unit)? = null,
@@ -72,7 +74,7 @@ fun MatrixMarkdownTextField(
     placeholder: @Composable (() -> Unit)? = null,
     decorator: TextFieldDecorator? = null,
 ) {
-    val parser = remember(features) { MatrixMarkdownParser(features) }
+    val parser = remember(features, preFormatStyle) { MatrixMarkdownParser(features, preFormatStyle) }
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
     val currentEmoteSize by rememberUpdatedState(emoteSize.takeIf { emote != null })

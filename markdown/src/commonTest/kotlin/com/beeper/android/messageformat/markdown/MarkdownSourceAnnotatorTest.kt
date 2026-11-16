@@ -6,6 +6,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import com.beeper.android.messageformat.MatrixBodyAnnotations
 import com.beeper.android.messageformat.MatrixBodyParseResult
+import com.beeper.android.messageformat.MatrixBodyPreFormatStyle
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -86,6 +87,49 @@ class MarkdownSourceAnnotatorTest {
         val auto = annotate("<https://x.org>")
         assertEquals(listOf("https://x.org" to "https://x.org"), auto.annotated(MatrixBodyAnnotations.WEB_LINK))
         assertEquals(listOf("<", ">"), auto.markers())
+    }
+
+    @Test
+    fun plainLinks() {
+        val plain = annotate("see https://x.org/a, or mail me@x.org")
+        assertEquals(listOf("https://x.org/a" to "https://x.org/a"), plain.annotated(MatrixBodyAnnotations.WEB_LINK))
+        assertEquals(listOf("me@x.org" to "me@x.org"), plain.annotated(MatrixBodyAnnotations.MAIL_ADDRESS))
+
+        val emphasized = annotate("**https://x.org/a** and *https://y.org/b*")
+        assertEquals(
+            listOf("https://x.org/a", "https://y.org/b"),
+            emphasized.annotated(MatrixBodyAnnotations.WEB_LINK).map { it.first },
+        )
+
+        val alias = annotate("join #room:x.org")
+        assertEquals(listOf("#room:x.org"), alias.annotated(MatrixBodyAnnotations.ROOM_LINK).map { it.first })
+    }
+
+    @Test
+    fun plainLinksAreNotSearchedInLinksAndCode() {
+        val code = annotate("`https://x.org` ![https://i.org](mxc://x.org/i)\n```\nhttps://y.org\n```")
+        assertEquals(emptyList(), code.annotated(MatrixBodyAnnotations.WEB_LINK))
+
+        val links = annotate("[https://a.org](https://x.org) <https://y.org>")
+        assertEquals(
+            listOf("https://a.org" to "https://x.org", "https://y.org" to "https://y.org"),
+            links.annotated(MatrixBodyAnnotations.WEB_LINK),
+        )
+    }
+
+    @Test
+    fun plainLinksAreNotSearchedInEntities() {
+        val mention = MatrixInlineEntity.UserMention(0, 13, "@alice:x.org")
+        val result = MatrixMarkdownParser(MarkdownFeature.ALL).annotateSource("https://x.org https://y.org", listOf(mention))
+        assertEquals(listOf("https://y.org"), result.annotated(MatrixBodyAnnotations.WEB_LINK).map { it.first })
+    }
+
+    @Test
+    fun plainLinksFollowThePreFormatStyle() {
+        val style = MatrixBodyPreFormatStyle(autoLinkUrlPattern = null)
+        val result = MatrixMarkdownParser(MarkdownFeature.ALL, style).annotateSource("https://x.org me@x.org")
+        assertEquals(emptyList(), result.annotated(MatrixBodyAnnotations.WEB_LINK))
+        assertEquals(listOf("me@x.org"), result.annotated(MatrixBodyAnnotations.MAIL_ADDRESS).map { it.first })
     }
 
     @Test

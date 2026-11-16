@@ -4,6 +4,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import com.beeper.android.messageformat.InlineImageInfo
 import com.beeper.android.messageformat.MatrixBodyAnnotations
 import com.beeper.android.messageformat.MatrixBodyParseResult
+import com.beeper.android.messageformat.MatrixBodyPreFormatStyle
 import com.beeper.android.messageformat.MatrixToLink
 import com.beeper.android.messageformat.markdown.html.MatrixHtmlProviders
 import com.beeper.android.messageformat.markdown.html.MatrixInlineEntityTagRenderer
@@ -18,11 +19,14 @@ import org.intellij.markdown.parser.MarkdownParser
  * Parses the markdown of [features] into Matrix HTML or into formatting of the source text itself.
  * [MatrixInlineEntity]s in the text are never parsed as markdown.
  */
-class MatrixMarkdownParser(features: Set<MarkdownFeature>) {
+class MatrixMarkdownParser(
+    features: Set<MarkdownFeature>,
+    preFormatStyle: MatrixBodyPreFormatStyle = MatrixBodyPreFormatStyle(),
+) {
 
     private val flavour = MatrixMarkdownFlavour(features)
     private val parser = MarkdownParser(flavour, false, CancellationToken.NonCancellable)
-    private val sourceAnnotator = MarkdownSourceAnnotator(features)
+    private val sourceAnnotator = MarkdownSourceAnnotator(features, preFormatStyle)
 
     internal fun parse(markdown: CharSequence): ASTNode = parser.buildMarkdownTreeFromString(markdown)
 
@@ -68,7 +72,7 @@ class MatrixMarkdownParser(features: Set<MarkdownFeature>) {
         val valid = content.entities
         if (valid.isEmpty()) return sourceAnnotator.annotate(markdown, parse(markdown))
         val masked = EntityMasking.mask(markdown, valid).text
-        val result = sourceAnnotator.annotate(markdown, parse(masked), parsed = masked)
+        val result = sourceAnnotator.annotate(markdown, parse(masked), parsed = masked, entities = valid)
         val inlineImages = mutableMapOf<String, InlineImageInfo>()
         val text = buildAnnotatedString {
             append(result.text)
