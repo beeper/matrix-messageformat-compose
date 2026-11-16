@@ -13,10 +13,14 @@ import kotlin.math.min
  */
 internal object EntityReconciler {
 
-    fun TextFieldBuffer.reconcile(entities: List<MatrixInlineEntity>): List<MatrixInlineEntity> {
+    /** [stepped] tells that a selection change is a single step, like that of a key, and not one of a drag. */
+    fun TextFieldBuffer.reconcile(
+        entities: List<MatrixInlineEntity>,
+        stepped: Boolean = false,
+    ): List<MatrixInlineEntity> {
         if (entities.isEmpty()) return entities
         if (changes.changeCount == 0) {
-            moveCursorOutOf(entities)
+            moveSelectionOutOf(entities, stepped)
             return entities
         }
         val recorded = (0 until changes.changeCount).map { Change(changes.getOriginalRange(it), changes.getRange(it)) }
@@ -169,18 +173,40 @@ internal object EntityReconciler {
         return offset + shift
     }
 
-    private fun TextFieldBuffer.moveCursorOutOf(entities: List<MatrixInlineEntity>) {
-        if (!selection.collapsed) return
-        val cursor = selection.start
-        val inside = entities.firstOrNull { it.start < cursor && cursor < it.end } ?: return
+    private fun TextFieldBuffer.moveSelectionOutOf(entities: List<MatrixInlineEntity>, stepped: Boolean) {
         val from = originalSelection
-        val target = when {
-            // A cursor stepping in from an edge crosses the entity, as snapping back would trap arrow keys
-            from.collapsed && from.start == inside.end -> inside.start
-            from.collapsed && from.start == inside.start -> inside.end
-            cursor - inside.start < inside.end - cursor -> inside.start
-            else -> inside.end
+        val moved = selection
+        fun entityAround(offset: Int) = entities.firstOrNull { it.start < offset && offset < it.end }
+
+        if (moved.collapsed) {
+            val cursor = moved.start
+            val inside = entityAround(cursor) ?: return
+            val target = when {
+                // A cursor stepping in from an edge crosses the entity, as snapping back would trap arrow keys
+                from.collapsed && from.start == inside.end -> inside.start
+                from.collapsed && from.start == inside.start -> inside.end
+                cursor - inside.start < inside.end - cursor -> inside.start
+                else -> inside.end
+            }
+            selection = TextRange(target)
+            return
         }
-        selection = TextRange(target)
+
+        fun outOf(offset: Int, previous: Int, steppedAlone: Boolean, isLowerEnd: Boolean): Int {
+            val inside = entityAround(offset) ?: return offset
+            return when {
+                // Crossing lets a step shrink the selection past an entity. A dragged end stays inside the
+                // entity over many changes, and would flip between the edges if it crossed.
+                steppedAlone && previous == inside.end -> inside.start
+                steppedAlone && previous == inside.start -> inside.end
+                isLowerEnd -> inside.start
+                else -> inside.end
+            }
+        }
+        val snapped = TextRange(
+            outOf(moved.start, from.start, stepped && moved.end == from.end, isLowerEnd = !moved.reversed),
+            outOf(moved.end, from.end, stepped && moved.start == from.start, isLowerEnd = moved.reversed),
+        )
+        if (snapped != moved) selection = snapped
     }
 }

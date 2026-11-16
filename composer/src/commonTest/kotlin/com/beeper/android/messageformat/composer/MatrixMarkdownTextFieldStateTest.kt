@@ -1,5 +1,6 @@
 package com.beeper.android.messageformat.composer
 
+import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.ui.text.TextRange
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
@@ -12,6 +13,14 @@ class MatrixMarkdownTextFieldStateTest {
 
     private fun state(text: String = "hi @Alice there", vararg entities: MatrixInlineEntity = arrayOf(alice(3, 9))) =
         MatrixMarkdownTextFieldState(text, entities.toList())
+
+    /** Edits as the text field does for the user's input. */
+    private fun MatrixMarkdownTextFieldState.input(block: TextFieldBuffer.() -> Unit) {
+        textFieldState.edit {
+            block()
+            with(inputTransformation) { transformInput() }
+        }
+    }
 
     private fun MatrixMarkdownTextFieldState.assertState(text: String, vararg entities: MatrixInlineEntity) {
         assertEquals(text, this.text.toString())
@@ -284,5 +293,88 @@ class MatrixMarkdownTextFieldStateTest {
         assertEquals(TextRange(3), state.textFieldState.selection)
         state.edit { selection = TextRange(4) }
         assertEquals(TextRange(9), state.textFieldState.selection)
+    }
+
+    @Test
+    fun selectionEndingInsideAPillGrowsToCoverIt() {
+        val state = state()
+        state.edit { selection = TextRange(1, 5) }
+        assertEquals(TextRange(1, 9), state.textFieldState.selection)
+        state.edit { selection = TextRange(12, 7) }
+        assertEquals(TextRange(12, 3), state.textFieldState.selection)
+        state.edit { selection = TextRange(7, 12) }
+        assertEquals(TextRange(3, 12), state.textFieldState.selection)
+    }
+
+    @Test
+    fun selectionInsideAPillCoversAllOfIt() {
+        val state = state()
+        state.edit { selection = TextRange(9) }
+        state.edit { selection = TextRange(5, 8) }
+        assertEquals(TextRange(3, 9), state.textFieldState.selection)
+        state.edit { selection = TextRange(7, 4) }
+        assertEquals(TextRange(9, 3), state.textFieldState.selection)
+    }
+
+    @Test
+    fun selectionEndSteppingIntoAPillFromItsEdgeCrossesIt() {
+        val state = state()
+        state.edit { selection = TextRange(1, 3) }
+        state.edit { selection = TextRange(1, 4) }
+        assertEquals(TextRange(1, 9), state.textFieldState.selection)
+        state.edit { selection = TextRange(1, 8) }
+        assertEquals(TextRange(1, 3), state.textFieldState.selection)
+
+        state.edit { selection = TextRange(12, 9) }
+        state.edit { selection = TextRange(12, 8) }
+        assertEquals(TextRange(12, 3), state.textFieldState.selection)
+        state.edit { selection = TextRange(12, 4) }
+        assertEquals(TextRange(12, 9), state.textFieldState.selection)
+    }
+
+    @Test
+    fun selectionEndDraggedInsideAPillKeepsCoveringIt() {
+        val state = state()
+        state.input { selection = TextRange(1, 8) }
+        assertEquals(TextRange(1, 9), state.textFieldState.selection)
+        state.input { selection = TextRange(1, 8) }
+        assertEquals(TextRange(1, 9), state.textFieldState.selection)
+        state.input { selection = TextRange(1, 4) }
+        assertEquals(TextRange(1, 9), state.textFieldState.selection)
+        state.input { selection = TextRange(1, 3) }
+        assertEquals(TextRange(1, 3), state.textFieldState.selection)
+    }
+
+    @Test
+    fun selectionEndSteppedByKeyIntoAPillFromItsEdgeCrossesIt() {
+        val state = state()
+        state.navigatingByKey = true
+        state.input { selection = TextRange(1, 9) }
+        state.input { selection = TextRange(1, 8) }
+        assertEquals(TextRange(1, 3), state.textFieldState.selection)
+        state.input { selection = TextRange(1, 4) }
+        assertEquals(TextRange(1, 9), state.textFieldState.selection)
+    }
+
+    @Test
+    fun selectionCoveringOnlyAPillShrinksToACursor() {
+        val state = state()
+        state.edit { selection = TextRange(3, 9) }
+        state.edit { selection = TextRange(3, 8) }
+        assertEquals(TextRange(3), state.textFieldState.selection)
+        state.edit { selection = TextRange(9) }
+        state.edit { selection = TextRange(9, 8) }
+        assertEquals(TextRange(9, 3), state.textFieldState.selection)
+    }
+
+    @Test
+    fun selectionOutsidePillsIsLeftAlone() {
+        val state = state()
+        state.edit { selection = TextRange(0, 3) }
+        assertEquals(TextRange(0, 3), state.textFieldState.selection)
+        state.edit { selection = TextRange(3, 9) }
+        assertEquals(TextRange(3, 9), state.textFieldState.selection)
+        state.edit { selection = TextRange(15, 9) }
+        assertEquals(TextRange(15, 9), state.textFieldState.selection)
     }
 }

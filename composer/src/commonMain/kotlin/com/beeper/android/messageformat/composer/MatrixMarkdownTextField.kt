@@ -18,11 +18,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
@@ -96,7 +102,13 @@ fun MatrixMarkdownTextField(
     }
     BasicTextField(
         state = state.textFieldState,
-        modifier = modifier,
+        modifier = modifier
+            .onPreviewKeyEvent { event ->
+                if (event.key in NAVIGATION_KEYS) state.navigatingByKey = event.type == KeyEventType.KeyDown
+                false
+            }
+            // The key up of a key held while focus is lost goes elsewhere
+            .onFocusChanged { if (!it.hasFocus) state.navigatingByKey = false },
         enabled = enabled,
         inputTransformation = state.inputTransformation,
         textStyle = textStyle,
@@ -127,6 +139,17 @@ fun MatrixMarkdownTextField(
         },
     )
 }
+
+private val NAVIGATION_KEYS = setOf(
+    Key.DirectionLeft,
+    Key.DirectionRight,
+    Key.DirectionUp,
+    Key.DirectionDown,
+    Key.MoveHome,
+    Key.MoveEnd,
+    Key.PageUp,
+    Key.PageDown,
+)
 
 /** The size of a custom emote in a [MatrixMarkdownTextField], in sp or in em of the text's font size. */
 data class MatrixComposerEmoteSize(val width: TextUnit, val height: TextUnit) {

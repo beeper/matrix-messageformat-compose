@@ -46,12 +46,19 @@ class MatrixMarkdownTextFieldState(
 
     val undoState: UndoState get() = textFieldState.undoState
 
-    internal val inputTransformation: InputTransformation = InputTransformation { update() }
+    internal val inputTransformation: InputTransformation = InputTransformation { update(stepped = navigatingByKey) }
 
+    /** Whether a navigation key is held, so that it and not a pointer moves the selection. */
+    internal var navigatingByKey = false
+
+    /**
+     * A selection end that [block] moves into an entity from one of its edges crosses the entity, so
+     * [block] should not follow a drag.
+     */
     fun edit(block: TextFieldBuffer.() -> Unit) {
         textFieldState.edit {
             block()
-            update()
+            update(stepped = true)
         }
     }
 
@@ -116,9 +123,9 @@ class MatrixMarkdownTextFieldState(
         }
     }
 
-    private fun TextFieldBuffer.update() {
+    private fun TextFieldBuffer.update(stepped: Boolean) {
         val previous = contentFor(originalText)
-        align(previous, reconcile(previous.entities), asCharSequence())
+        align(previous, reconcile(previous.entities, stepped), asCharSequence())
     }
 
     private fun align(previous: MatrixMarkdownContent, entities: List<MatrixInlineEntity>, text: CharSequence) {
