@@ -321,7 +321,7 @@
   },
   {
     "markdown": "&amp; &lt; &copy; &#35;",
-    "html": "&amp; &lt; © #"
+    "html": "&amp;amp; &amp;lt; &amp;copy; &amp;#35;"
   },
   {
     "markdown": "<!-- comment -->",

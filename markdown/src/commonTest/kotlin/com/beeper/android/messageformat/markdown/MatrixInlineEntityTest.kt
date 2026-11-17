@@ -160,6 +160,7 @@ class MatrixInlineEntityTest {
     @Test
     fun draftStaysPlainWithoutFormatting() {
         assertNull(parser.toDraft("a & b < c").formattedBody)
+        assertNull(MatrixMarkdownParser(emptySet()).toDraft("¯\\_(ツ)_/¯ &copy;").formattedBody)
     }
 
     @Test

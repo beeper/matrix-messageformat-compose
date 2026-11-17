@@ -80,6 +80,23 @@ class MatrixMarkdownParserTest {
     }
 
     @Test
+    fun escapeBackslashesAreKeptWithoutFormatting() {
+        assertEquals("*x*", html("\\*x\\*"))
+        assertEquals("¯_(ツ)_/¯", html("¯\\_(ツ)_/¯", setOf(MarkdownFeature.BOLD)))
+        assertEquals("\\*x\\*", html("\\*x\\*", emptySet()))
+        assertEquals("¯\\_(ツ)_/¯", html("¯\\_(ツ)_/¯", emptySet()))
+        assertEquals("C:\\*.exe", html("C:\\*.exe", emptySet()))
+        assertEquals("C:\\<br>b", html("C:\\\nb", emptySet()))
+        assertEquals("*x*", MatrixMarkdownParser(emptySet(), stripEscapeBackslashes = true).toHtml("\\*x\\*"))
+    }
+
+    @Test
+    fun htmlEntitiesStayAsTyped() {
+        assertEquals("&amp;copy; &amp;#128512; &amp;lt;", html("&copy; &#128512; &lt;"))
+        assertEquals("&amp;copy; &amp;#128512; &amp;lt;", html("&copy; &#128512; &lt;", emptySet()))
+    }
+
+    @Test
     fun blockquotes() {
         assertEquals("&gt; quoted", html("> quoted", emptySet()))
         assertEquals("a<br>&gt; b", html("a\n> b", emptySet()))

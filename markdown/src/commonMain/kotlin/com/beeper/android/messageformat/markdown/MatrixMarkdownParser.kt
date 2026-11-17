@@ -18,13 +18,17 @@ import org.intellij.markdown.parser.MarkdownParser
 /**
  * Parses the markdown of [features] into Matrix HTML or into formatting of the source text itself.
  * [MatrixInlineEntity]s in the text are never parsed as markdown.
+ *
+ * [stripEscapeBackslashes] leaves the backslash of an escape such as `\*` out of the HTML. By default
+ * text is sent with its backslashes when there are no [features], as nothing in it needs escaping.
  */
 class MatrixMarkdownParser(
     features: Set<MarkdownFeature>,
     preFormatStyle: MatrixBodyPreFormatStyle = MatrixBodyPreFormatStyle(),
+    stripEscapeBackslashes: Boolean = features.isNotEmpty(),
 ) {
 
-    private val flavour = MatrixMarkdownFlavour(features)
+    private val flavour = MatrixMarkdownFlavour(features, stripEscapeBackslashes)
     private val parser = MarkdownParser(flavour, false, CancellationToken.NonCancellable)
     private val sourceAnnotator = MarkdownSourceAnnotator(features, preFormatStyle)
 
@@ -40,7 +44,7 @@ class MatrixMarkdownParser(
             return HtmlGenerator(markdown, parse(markdown), flavour).generateHtml().unwrapSingleParagraph()
         }
         val masking = EntityMasking.mask(markdown, valid)
-        val providers = MatrixHtmlProviders.create(flavour.features) { html ->
+        val providers = MatrixHtmlProviders.create(flavour.features, flavour.stripEscapeBackslashes) { html ->
             masking.unmask(html) { entity -> escapeHtml(entity.sentText(markdown.substring(entity.start, entity.end))) }
         }
         return HtmlGenerator(masking.text, parse(masking.text), providers)

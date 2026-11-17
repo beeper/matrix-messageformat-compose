@@ -25,7 +25,10 @@ import org.intellij.markdown.parser.sequentialparsers.impl.ImageParser
 import org.intellij.markdown.parser.sequentialparsers.impl.InlineLinkParser
 
 /** The CommonMark and GFM syntax of [features], rendered to the Matrix HTML subset. */
-internal class MatrixMarkdownFlavour(val features: Set<MarkdownFeature>) : MarkdownFlavourDescriptor {
+internal class MatrixMarkdownFlavour(
+    val features: Set<MarkdownFeature>,
+    val stripEscapeBackslashes: Boolean,
+) : MarkdownFlavourDescriptor {
 
     override val markerProcessorFactory: MarkerProcessorFactory = MatrixMarkdownMarkerProcessor.Factory(features)
 
@@ -54,5 +57,5 @@ internal class MatrixMarkdownFlavour(val features: Set<MarkdownFeature>) : Markd
     }
 
     override fun createHtmlGeneratingProviders(linkMap: LinkMap, baseURI: URI?): Map<IElementType, GeneratingProvider> =
-        MatrixHtmlProviders.create(features)
+        MatrixHtmlProviders.create(features, stripEscapeBackslashes)
 }

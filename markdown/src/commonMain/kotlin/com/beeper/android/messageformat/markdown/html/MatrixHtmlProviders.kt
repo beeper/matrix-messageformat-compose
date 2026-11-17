@@ -29,10 +29,11 @@ internal object MatrixHtmlProviders {
 
     fun create(
         features: Set<MarkdownFeature>,
+        stripEscapeBackslashes: Boolean,
         sentEntityText: (CharSequence) -> CharSequence = { it },
     ): Map<IElementType, GeneratingProvider> = buildMap {
         val blockQuotes = MarkdownFeature.BLOCKQUOTE in features
-        val inline = InlineRenderer(blockQuoteMarkersAreSyntax = blockQuotes)
+        val inline = InlineRenderer(blockQuoteMarkersAreSyntax = blockQuotes, stripEscapeBackslashes)
         put(MarkdownElementTypes.PARAGRAPH, InlineTagProvider(inline, "p"))
         put(MarkdownTokenTypes.HARD_LINE_BREAK, RawHtmlProvider(LINE_BREAK))
         put(MarkdownTokenTypes.HTML_TAG, EscapedTextProvider)
@@ -69,9 +70,19 @@ internal fun escapeHtml(text: CharSequence): String =
     EntityConverter.replaceEntities(text, processEntities = false, processEscapes = false)
 
 /** Renders inline children with newlines as `<br>`, dropping continuation indentation and surrounding whitespace. */
-private class InlineRenderer(private val blockQuoteMarkersAreSyntax: Boolean) {
+private class InlineRenderer(
+    private val blockQuoteMarkersAreSyntax: Boolean,
+    private val stripEscapeBackslashes: Boolean,
+) {
 
-    fun render(visitor: HtmlGenerator.HtmlGeneratingVisitor, children: List<ASTNode>) {
+    /** The text of [leaf] as HTML. An entity such as `&copy;` is not decoded, so it reads as it was typed. */
+    private fun leafHtml(text: String, leaf: ASTNode): String = EntityConverter.replaceEntities(
+        leaf.getTextInNode(text),
+        processEntities = false,
+        processEscapes = stripEscapeBackslashes && leaf.type !in LITERAL_TOKENS,
+    )
+
+    fun render(visitor: HtmlGenerator.HtmlGeneratingVisitor, text: String, children: List<ASTNode>) {
         var from = 0
         var to = children.size
         while (from < to && children[from].type == MarkdownTokenTypes.WHITE_SPACE) from++
@@ -81,17 +92,23 @@ private class InlineRenderer(private val blockQuoteMarkersAreSyntax: Boolean) {
         for (child in children.subList(from, to)) {
             val isLineBreak = child.type == MarkdownTokenTypes.EOL || child.type == MarkdownTokenTypes.HARD_LINE_BREAK
             val isQuoteMarker = blockQuoteMarkersAreSyntax && child.type == MarkdownTokenTypes.BLOCK_QUOTE
+            val isBackslashBreak = child.type == MarkdownTokenTypes.HARD_LINE_BREAK && text[child.startOffset] == '\\'
+            if (isBackslashBreak && !stripEscapeBackslashes) visitor.consumeHtml("\\")
             when {
                 isQuoteMarker -> Unit
                 isLineBreak && afterLineBreak -> Unit
                 isLineBreak -> visitor.consumeHtml(LINE_BREAK)
                 afterLineBreak && child.type == MarkdownTokenTypes.WHITE_SPACE -> Unit
-                child is LeafASTNode -> visitor.visitLeaf(child)
+                child is LeafASTNode -> visitor.consumeHtml(leafHtml(text, child))
                 else -> child.accept(visitor)
             }
             val continuesLineStart = child.type == MarkdownTokenTypes.WHITE_SPACE || isQuoteMarker
             afterLineBreak = isLineBreak || (afterLineBreak && continuesLineStart)
         }
+    }
+
+    private companion object {
+        val LITERAL_TOKENS = setOf(MarkdownTokenTypes.HTML_TAG, MarkdownTokenTypes.BLOCK_QUOTE)
     }
 }
 
@@ -102,9 +119,9 @@ private class InlineTagProvider(
     private val markerTokens: Int = 0,
 ) : GeneratingProvider {
     override fun processNode(visitor: HtmlGenerator.HtmlGeneratingVisitor, text: String, node: ASTNode) {
-        if (node.children.size <= 2 * markerTokens) return inline.render(visitor, node.children)
+        if (node.children.size <= 2 * markerTokens) return inline.render(visitor, text, node.children)
         tagName?.let { visitor.consumeTagOpen(node, it) }
-        inline.render(visitor, node.children.subList(markerTokens, node.children.size - markerTokens))
+        inline.render(visitor, text, node.children.subList(markerTokens, node.children.size - markerTokens))
         tagName?.let { visitor.consumeTagClose(it) }
     }
 }
@@ -134,7 +151,7 @@ private class SpoilerProvider(
         val attribute =
             if (reason.isEmpty()) "data-mx-spoiler" else "data-mx-spoiler=\"${sentEntityText(escapeHtml(reason))}\""
         visitor.consumeTagOpen(node, "span", attribute)
-        inline.render(visitor, content)
+        inline.render(visitor, text, content)
         visitor.consumeTagClose("span")
     }
 }
@@ -201,7 +218,7 @@ private class ListItemProvider(private val inline: InlineRenderer) : GeneratingP
         visitor.consumeTagOpen(node, "li", jumpValueAttribute(list, node, text))
         for (child in node.children) {
             if (tight && child.type == MarkdownElementTypes.PARAGRAPH) {
-                inline.render(visitor, child.children)
+                inline.render(visitor, text, child.children)
             } else {
                 child.accept(visitor)
             }
@@ -234,7 +251,7 @@ private class InlineLinkProvider(
         val destination = makeXssSafeDestination(makeAbsoluteUrl(info.destination))
         val titleAttribute = info.title?.let { "title=\"${sentEntityText(it)}\"" }
         visitor.consumeTagOpen(node, "a", "href=\"$destination\"", titleAttribute)
-        inline.render(visitor, info.label.children.subList(1, info.label.children.size - 1))
+        inline.render(visitor, text, info.label.children.subList(1, info.label.children.size - 1))
         visitor.consumeTagClose("a")
     }
 }
@@ -242,6 +259,7 @@ private class InlineLinkProvider(
 private object AutolinkProvider : GeneratingProvider {
     override fun processNode(visitor: HtmlGenerator.HtmlGeneratingVisitor, text: String, node: ASTNode) {
         val linkText = node.getTextInNode(text)
+        // The href decodes entities, so the label does too and shows the same address
         val label = EntityConverter.replaceEntities(
             linkText.subSequence(1, linkText.length - 1),
             processEntities = true,
