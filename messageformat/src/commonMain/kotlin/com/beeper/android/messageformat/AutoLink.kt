@@ -26,7 +26,7 @@ fun AnnotatedString.Builder.addAutoLinkAnnotations(text: String, offset: Int, st
         while (matcher.find()) {
             val startInText = matcher.start()
             val endInText = matcher.end()
-            if (webUrlRanges.any { (urlStart, urlEnd) -> urlStart < startInText && urlEnd > startInText }) {
+            if (webUrlRanges.any { (urlStart, urlEnd) -> urlStart < startInText && urlEnd > startInText && !overlapsExistingLink(urlStart, urlEnd) }) {
                 continue
             }
             val emailAddress = text.substring(startInText, endInText)
