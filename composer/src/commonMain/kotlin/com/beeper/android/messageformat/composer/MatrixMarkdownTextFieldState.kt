@@ -14,10 +14,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
 import com.beeper.android.messageformat.composer.EntityReconciler.reconcile
+import com.beeper.android.messageformat.composer.MarkReconciler.reconcileMarks
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
 import com.beeper.android.messageformat.markdown.MatrixMarkdownContent
 
-/** The text of a [MatrixMarkdownTextField] and the [MatrixInlineEntity]s in it, kept aligned through every edit. */
+/**
+ * The text of a [MatrixMarkdownTextField] with the [MatrixInlineEntity]s and [ComposerTextMark]s in it, kept
+ * aligned through every edit.
+ */
 class MatrixMarkdownTextFieldState(
     initialText: String = "",
     initialEntities: List<MatrixInlineEntity> = emptyList(),
@@ -45,6 +49,27 @@ class MatrixMarkdownTextFieldState(
     val selection: TextRange get() = textFieldState.selection
 
     val undoState: UndoState get() = textFieldState.undoState
+
+    private var marked by mutableStateOf(Marks(initialText, emptyList()))
+
+    /**
+     * The marks from [setMarks], which have followed the text since as [ComposerTextMark] describes. Undo and
+     * redo hide them, unless they return to the text that the marks last fit. Marks are not saved with the state.
+     */
+    val marks: List<ComposerTextMark<*>>
+        get() = marked.takeIf { textFieldState.text.contentEquals(it.text) }?.list.orEmpty()
+
+    /**
+     * Replaces the [marks] with those the app made for [text], leaving out any that are empty or reach outside
+     * of it. Returns false and keeps the current marks if the field no longer holds [text], as the ranges
+     * would not fit.
+     */
+    fun setMarks(text: CharSequence, marks: List<ComposerTextMark<*>>): Boolean {
+        if (!textFieldState.text.contentEquals(text)) return false
+        val valid = marks.filter { it.start in 0 until it.end && it.end <= text.length }
+        marked = Marks(text.toString(), valid)
+        return true
+    }
 
     internal val inputTransformation: InputTransformation = InputTransformation { update(stepped = navigatingByKey) }
 
@@ -128,15 +153,30 @@ class MatrixMarkdownTextFieldState(
         align(previous, reconcile(previous.entities, stepped), asCharSequence())
     }
 
-    private fun align(previous: MatrixMarkdownContent, entities: List<MatrixInlineEntity>, text: CharSequence) {
+    private fun TextFieldBuffer.align(
+        previous: MatrixMarkdownContent,
+        entities: List<MatrixInlineEntity>,
+        text: CharSequence,
+    ) {
         val content = MatrixMarkdownContent(text.toString(), entities)
         aligned = content
         realigned = null
         history.record(previous, content)
+        alignMarks(content.text)
     }
 
+    private fun TextFieldBuffer.alignMarks(text: String) {
+        val current = marked
+        if (current.list.isEmpty()) return
+        val kept = if (originalText.contentEquals(current.text)) reconcileMarks(current.list) else emptyList()
+        marked = Marks(text, kept)
+    }
+
+    /** Marks with the [text] they fit. */
+    private class Marks(val text: String, val list: List<ComposerTextMark<*>>)
+
     companion object {
-        /** Saves the text, its entities and the selection, but no undo history. */
+        /** Saves the text, its entities and the selection, but neither marks nor undo history. */
         val Saver: Saver<MatrixMarkdownTextFieldState, Any> = listSaver(
             save = { state ->
                 val content = state.content
