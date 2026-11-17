@@ -1,6 +1,9 @@
 package com.beeper.android.messageformat.composer
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.rememberScrollState
@@ -23,13 +26,19 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.node.Ref
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
@@ -38,11 +47,14 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.toOffset
+import com.beeper.android.messageformat.DrawPosition
 import com.beeper.android.messageformat.MatrixBodyDrawStyle
 import com.beeper.android.messageformat.MatrixBodyPreFormatStyle
 import com.beeper.android.messageformat.MatrixBodyStyledFormatter
 import com.beeper.android.messageformat.drawMatrixBodyBackgrounds
 import com.beeper.android.messageformat.matrixFormatOnTextRenderResult
+import com.beeper.android.messageformat.perLineBoundingBoxesForRange
 import com.beeper.android.messageformat.markdown.MarkdownFeature
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
 import com.beeper.android.messageformat.markdown.MatrixMarkdownParser
@@ -52,6 +64,10 @@ import kotlin.math.roundToInt
  * A text field that formats markdown in place, as [features] allow.
  * Custom emotes show as [emote] draws them, in the size [emoteSize] gives, and as their text without
  * [emote]. [emoteSize] must depend only on the emote and on snapshot state.
+ * [drawMark] draws the marks of [state], which do not show without it. It draws behind the text, once per
+ * line a mark is on, given where the mark is on that line and the line's baseline. [onMarkClick] is told of
+ * a tap on a mark, but not of a drag or long press, with the bounds of the mark on the tapped line. The tap
+ * still places the cursor.
  */
 @Composable
 fun MatrixMarkdownTextField(
@@ -64,6 +80,8 @@ fun MatrixMarkdownTextField(
     drawStyle: MatrixBodyDrawStyle = remember { MatrixBodyDrawStyle() },
     emote: (@Composable (MatrixInlineEntity.CustomEmote) -> Unit)? = null,
     emoteSize: (MatrixInlineEntity.CustomEmote) -> MatrixComposerEmoteSize = { MatrixComposerEmoteSize.Default },
+    drawMark: (DrawScope.(mark: ComposerTextMark<*>, position: DrawPosition.InLine, baseline: Float) -> Unit)? = null,
+    onMarkClick: ((mark: ComposerTextMark<*>, boundsInWindow: Rect) -> Unit)? = null,
     enabled: Boolean = true,
     lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
@@ -100,8 +118,38 @@ fun MatrixMarkdownTextField(
         val offset = scrollOffset()
         translate(left = offset.x.toFloat(), top = offset.y.toFloat()) {
             drawMatrixBodyBackgrounds(drawStyle, result, render.interactionState)
+            if (drawMark != null) {
+                state.marks.forEach { mark ->
+                    render.markSegments(mark, layout).forEach { drawMark(mark, it, layout.getLineBaseline(it.line)) }
+                }
+            }
         }
     }
+    val currentOnMarkClick by rememberUpdatedState(onMarkClick)
+    val markCoordinates = remember { Ref<LayoutCoordinates>() }
+    val markClicks = if (onMarkClick == null) Modifier else Modifier
+        .onGloballyPositioned { markCoordinates.value = it }
+        .pointerInput(state, renderer, scrollState, scrollsVertically) {
+            awaitEachGesture {
+                // Only observed, so that the field still places the cursor
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                val up = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                    waitForUpOrCancellation(PointerEventPass.Initial)
+                } ?: return@awaitEachGesture
+                if ((up.position - down.position).getDistance() > viewConfiguration.touchSlop) return@awaitEachGesture
+                val render = renderer.render(state.content)
+                val layout = layoutProvider?.invoke()?.takeIf(render::fits) ?: return@awaitEachGesture
+                val coordinates = markCoordinates.value?.takeIf { it.isAttached } ?: return@awaitEachGesture
+                val scroll = scrollOffset().toOffset()
+                val position = up.position - scroll
+                for (mark in state.marks) {
+                    val segment = render.markSegments(mark, layout).firstOrNull { position in it.rect } ?: continue
+                    val topLeft = coordinates.localToWindow(segment.rect.topLeft + scroll)
+                    currentOnMarkClick?.invoke(mark, Rect(topLeft, segment.rect.size))
+                    break
+                }
+            }
+        }
     BasicTextField(
         state = state.textFieldState,
         modifier = modifier
@@ -124,7 +172,7 @@ fun MatrixMarkdownTextField(
         scrollState = scrollState,
         decorator = { innerTextField ->
             val decorated: @Composable () -> Unit = {
-                Box(backgrounds.clipToBounds()) {
+                Box(backgrounds.then(markClicks).clipToBounds()) {
                     if (placeholder != null && state.text.isEmpty()) placeholder()
                     innerTextField()
                     if (emote != null) {
@@ -152,6 +200,14 @@ private val NAVIGATION_KEYS = setOf(
     Key.PageUp,
     Key.PageDown,
 )
+
+/** Where [layout] shows [mark], per line. Nothing for a mark that does not fit this render. */
+private fun ComposerRender.markSegments(mark: ComposerTextMark<*>, layout: TextLayoutResult): List<DrawPosition.InLine> {
+    val start = toDisplayOffset(mark.start)
+    val end = toDisplayOffset(mark.end)
+    if (start >= end || end > displayText.length) return emptyList()
+    return layout.perLineBoundingBoxesForRange(start, end)
+}
 
 /** The size of a custom emote in a [MatrixMarkdownTextField], in sp or in em of the text's font size. */
 data class MatrixComposerEmoteSize(val width: TextUnit, val height: TextUnit) {
