@@ -95,6 +95,17 @@ class ComposerTextMarkTest {
     }
 
     @Test
+    fun aRewriteThatMayHaveEditedTheEdgeKeepsTheMark() {
+        val before = state()
+        before.input { replace(6, 9, "tteh") }
+        before.assertMarks("I saw tteh cat", mark.copy(start = 7, end = 10))
+
+        val after = state()
+        after.input { replace(6, 9, "tehh") }
+        after.assertMarks("I saw tehh cat", mark)
+    }
+
+    @Test
     fun aRewriteOfUnchangedTextKeepsTheMark() {
         val state = state()
         state.input { replace(0, length, "I saw teh cat!") }

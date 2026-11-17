@@ -20,11 +20,12 @@ internal object MarkReconciler {
     fun TextFieldBuffer.reconcileMarks(marks: List<ComposerTextMark<*>>): List<ComposerTextMark<*>> {
         if (marks.isEmpty() || changes.changeCount == 0) return marks
         val after = asCharSequence()
-        // A keyboard may rewrite more text than it changes
-        val narrowed = (0 until changes.changeCount).mapNotNull {
-            TextChange(changes.getOriginalRange(it), changes.getRange(it)).narrowed(originalText, after, prefixFirst = true)
-        }
-        return marks.mapNotNull { it.after(narrowed) }
+        val recorded = (0 until changes.changeCount).map { TextChange(changes.getOriginalRange(it), changes.getRange(it)) }
+        // A keyboard may rewrite more text than it changes, which can be read in two ways, like "AA" from "A"
+        return listOf(true, false)
+            .map { prefixFirst -> recorded.mapNotNull { it.narrowed(originalText, after, prefixFirst) } }
+            .map { narrowed -> marks.mapNotNull { it.after(narrowed) } }
+            .maxBy { it.size }
     }
 
     private fun <T> ComposerTextMark<T>.after(changes: List<TextChange>): ComposerTextMark<T>? {
