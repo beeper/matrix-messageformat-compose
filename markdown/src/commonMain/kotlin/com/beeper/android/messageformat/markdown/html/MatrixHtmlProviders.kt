@@ -42,7 +42,8 @@ internal object MatrixHtmlProviders {
         val bold = MarkdownFeature.BOLD in features
         put(MarkdownElementTypes.EMPH, inline.tagOrLiteral("em", italic, markerTokens = 1))
         put(MarkdownElementTypes.STRONG, inline.tagOrLiteral("strong", bold, markerTokens = 2))
-        put(GFMElementTypes.STRIKETHROUGH, InlineTagProvider(inline, "del", markerTokens = 2))
+        // Only `~~text~~` is strikethrough. The parser also matches `~text~`, which stays plain text
+        put(GFMElementTypes.STRIKETHROUGH, InlineTagProvider(inline, "del", markerTokens = 2, GFMTokenTypes.TILDE))
         put(MatrixMarkdownElementTypes.SPOILER, SpoilerProvider(inline, sentEntityText))
         put(MarkdownElementTypes.CODE_SPAN, CodeSpanProvider(sentEntityText))
         put(MarkdownElementTypes.CODE_FENCE, CodeFenceProvider(sentEntityText))
@@ -75,7 +76,7 @@ private class InlineRenderer(
     private val stripEscapeBackslashes: Boolean,
 ) {
 
-    /** The text of [leaf] as HTML. An entity such as `&copy;` is not decoded, so it reads as it was typed. */
+    /** HTML-escapes the text of [leaf]. Entities like `&copy;` are not decoded, so they show up as typed. */
     private fun leafHtml(text: String, leaf: ASTNode): String = EntityConverter.replaceEntities(
         leaf.getTextInNode(text),
         processEntities = false,
@@ -112,14 +113,25 @@ private class InlineRenderer(
     }
 }
 
+/**
+ * True if the node starts and ends with [markerTokens] delimiter tokens and has content in between.
+ * If [marker] is given, each of those delimiter tokens must be of that type.
+ */
+internal fun ASTNode.hasMarkers(markerTokens: Int, marker: IElementType?): Boolean {
+    if (children.size <= 2 * markerTokens) return false
+    if (marker == null) return true
+    return (children.take(markerTokens) + children.takeLast(markerTokens)).all { it.type == marker }
+}
+
 /** Wraps the inline content of a node in [tagName], dropping [markerTokens] delimiter tokens on each side. */
 private class InlineTagProvider(
     private val inline: InlineRenderer,
     private val tagName: String?,
     private val markerTokens: Int = 0,
+    private val marker: IElementType? = null,
 ) : GeneratingProvider {
     override fun processNode(visitor: HtmlGenerator.HtmlGeneratingVisitor, text: String, node: ASTNode) {
-        if (node.children.size <= 2 * markerTokens) return inline.render(visitor, text, node.children)
+        if (!node.hasMarkers(markerTokens, marker)) return inline.render(visitor, text, node.children)
         tagName?.let { visitor.consumeTagOpen(node, it) }
         inline.render(visitor, text, node.children.subList(markerTokens, node.children.size - markerTokens))
         tagName?.let { visitor.consumeTagClose(it) }
@@ -259,7 +271,7 @@ private class InlineLinkProvider(
 private object AutolinkProvider : GeneratingProvider {
     override fun processNode(visitor: HtmlGenerator.HtmlGeneratingVisitor, text: String, node: ASTNode) {
         val linkText = node.getTextInNode(text)
-        // The href decodes entities, so the label does too and shows the same address
+        // Decode entities in the label because the href decodes them too, and both should show the same URL
         val label = EntityConverter.replaceEntities(
             linkText.subSequence(1, linkText.length - 1),
             processEntities = true,

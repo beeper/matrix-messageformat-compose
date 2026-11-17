@@ -12,6 +12,7 @@ import com.beeper.android.messageformat.MatrixBodyParseResult
 import com.beeper.android.messageformat.MatrixBodyPreFormatStyle
 import com.beeper.android.messageformat.addAutoLinkAnnotations
 import com.beeper.android.messageformat.SpanAttributes
+import com.beeper.android.messageformat.markdown.html.hasMarkers
 import kotlinx.serialization.json.Json
 import org.intellij.markdown.IElementType
 import org.intellij.markdown.MarkdownElementTypes
@@ -72,7 +73,7 @@ internal class MarkdownSourceAnnotator(
                 MarkdownElementTypes.STRONG -> emphasis(node, MarkdownFeature.BOLD, BOLD, markerTokens = 2)
                 MarkdownElementTypes.EMPH -> emphasis(node, MarkdownFeature.ITALIC, ITALIC, markerTokens = 1)
                 GFMElementTypes.STRIKETHROUGH ->
-                    emphasis(node, MarkdownFeature.STRIKETHROUGH, STRIKETHROUGH, markerTokens = 2)
+                    emphasis(node, MarkdownFeature.STRIKETHROUGH, STRIKETHROUGH, markerTokens = 2, GFMTokenTypes.TILDE)
                 MatrixMarkdownElementTypes.SPOILER -> spoiler(node)
                 MarkdownElementTypes.CODE_SPAN -> codeSpan(node)
                 MarkdownElementTypes.CODE_FENCE -> codeFence(node)
@@ -88,9 +89,15 @@ internal class MarkdownSourceAnnotator(
 
         private fun visitChildren(children: List<ASTNode>) = children.forEach { visit(it) }
 
-        private fun emphasis(node: ASTNode, feature: MarkdownFeature, style: SpanStyle, markerTokens: Int) {
+        private fun emphasis(
+            node: ASTNode,
+            feature: MarkdownFeature,
+            style: SpanStyle,
+            markerTokens: Int,
+            marker: IElementType? = null,
+        ) {
             // Unbalanced delimiter runs can produce a node without content between its markers
-            if (node.children.size <= 2 * markerTokens) return visitChildren(node.children)
+            if (!node.hasMarkers(markerTokens, marker)) return visitChildren(node.children)
             val content = node.children.subList(markerTokens, node.children.size - markerTokens)
             if (feature in features) {
                 markerRange(node.startOffset, content.first().startOffset)

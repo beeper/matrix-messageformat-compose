@@ -41,6 +41,13 @@ class MarkdownSourceAnnotatorTest {
     }
 
     @Test
+    fun singleTildesAreNotStrikethrough() {
+        val result = annotate("~~typo, sorry~ ~~gone~~")
+        assertEquals(listOf("gone"), result.styled { it.textDecoration == TextDecoration.LineThrough })
+        assertEquals(listOf("~~", "~~"), result.markers())
+    }
+
+    @Test
     fun unbalancedDelimitersDoNotCrash() {
         listOf("~~~~", "****", "~~a ~~~~", "**a*", "~~", "**").forEach { assertEquals(it, annotate(it).text.text) }
     }

@@ -19,8 +19,8 @@ import org.intellij.markdown.parser.MarkdownParser
  * Parses the markdown of [features] into Matrix HTML or into formatting of the source text itself.
  * [MatrixInlineEntity]s in the text are never parsed as markdown.
  *
- * [stripEscapeBackslashes] leaves the backslash of an escape such as `\*` out of the HTML. By default
- * text is sent with its backslashes when there are no [features], as nothing in it needs escaping.
+ * If [stripEscapeBackslashes] is set, an escape like `\*` becomes `*` in the HTML. It defaults to off
+ * when [features] is empty: without markdown there is nothing to escape, so backslashes are kept as typed.
  */
 class MatrixMarkdownParser(
     features: Set<MarkdownFeature>,

@@ -28,6 +28,15 @@ class MatrixMarkdownParserTest {
     }
 
     @Test
+    fun singleTildesAreNotStrikethrough() {
+        assertEquals("~~typo, sorry~", html("~~typo, sorry~"))
+        assertEquals("costs ~5€ and ~~10€ no~", html("costs ~5€ and ~~10€ no~"))
+        assertEquals("_~hello there :)~", html("_~hello there :)~"))
+        assertEquals("~one two~", html("~one two~"))
+        assertEquals("a ~~~one two~~~", html("a ~~~one two~~~"))
+    }
+
+    @Test
     fun spoilers() {
         assertEquals("||secret||", html("||secret||", emptySet()))
     }
