@@ -46,6 +46,10 @@ abstract class MatrixBodyStyledFormatter {
     abstract fun tableIndention(depth: Int): TextUnit
     abstract fun formatDetailsSummary(revealId: Int, context: FormatContext): List<AnnotatedString.Annotation>?
     abstract fun formatDetailsContent(revealId: Int, context: FormatContext): List<AnnotatedString.Annotation>?
+    /** Styles the markup characters of a formatting syntax when the source is shown unrendered, e.g. markdown delimiters in a composer. */
+    open fun formatSyntaxMarker(context: FormatContext): List<AnnotatedString.Annotation>? = null
+    /** Styles the text standing in for an inline image where images cannot be shown, e.g. a custom emote shortcode in a composer. */
+    open fun formatInlineImageText(image: InlineImageInfo, context: FormatContext): List<AnnotatedString.Annotation>? = null
 
     data class FormatContext(
         val input: MatrixBodyParseResult,
@@ -166,6 +170,8 @@ abstract class MatrixBodyStyledFormatter {
                         formatDetailsContent(revealId, context)
                     }
                 }
+                MatrixBodyAnnotations.SYNTAX_MARKER -> formatSyntaxMarker(context)
+                MatrixBodyAnnotations.INLINE_IMAGE -> context.input.inlineImages[annotation.value]?.let { formatInlineImageText(it, context) }
 
                 else -> {
                     // Not ours or not necessary to process

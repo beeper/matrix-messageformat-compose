@@ -32,4 +32,6 @@ plugins {
 }
 
 include(":messageformat")
+include(":markdown")
+include(":composer")
 include(":playground")
