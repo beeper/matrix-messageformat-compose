@@ -58,6 +58,8 @@ and a second line</code></pre></li>
 <br>
 Auto-linked email address: test@example.com
 <br>
+Auto-linked URL containing an address: https://mastodon.example/@user@example.social/1234
+<br>
 Auto-linkified user link: https://matrix.to/#/@spiritcroc:matrix.org
 <br>
 <a href="https://matrix.to/#/@spiritcroc:beeper.com">Very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention very long mention</a>

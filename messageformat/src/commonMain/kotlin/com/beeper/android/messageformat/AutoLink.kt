@@ -16,10 +16,19 @@ fun AnnotatedString.Builder.addAutoLinkAnnotations(text: String, offset: Int, st
 
     // Auto-linkification of email addresses
     if (style.autoLinkEmailAddressPattern != null) {
+        val webUrlMatches = style.autoLinkUrlPattern?.let { pattern ->
+            val urlMatcher = pattern.matcher(text)
+            buildList { while (urlMatcher.find()) add(urlMatcher.start() until urlMatcher.end()) }
+        }.orEmpty()
         val matcher = style.autoLinkEmailAddressPattern.matcher(text)
         while (matcher.find()) {
             val startInText = matcher.start()
             val endInText = matcher.end()
+            if (webUrlMatches.any {
+                    it.first < startInText && it.last + 1 >= endInText && !overlapsExistingLink(it.first, it.last + 1)
+                }) {
+                continue
+            }
             val emailAddress = text.substring(startInText, endInText)
             addStringAnnotation(
                 MatrixBodyAnnotations.MAIL_ADDRESS,
