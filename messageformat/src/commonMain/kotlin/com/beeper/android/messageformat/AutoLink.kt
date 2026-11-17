@@ -14,12 +14,21 @@ fun AnnotatedString.Builder.addAutoLinkAnnotations(text: String, offset: Int, st
         }
     }
 
+    // Like LinkifyCompat, the earlier match wins when a web URL and an email address overlap: an address keeps
+    // its domain from becoming a web link, a URL keeps an address-like path (Mastodon /@user@server/id) intact.
+    val webUrlRanges = style.autoLinkUrlPattern?.matcher(text)?.let { matcher ->
+        buildList { while (matcher.find()) add(matcher.start() to matcher.end()) }
+    }.orEmpty()
+
     // Auto-linkification of email addresses
     if (style.autoLinkEmailAddressPattern != null) {
         val matcher = style.autoLinkEmailAddressPattern.matcher(text)
         while (matcher.find()) {
             val startInText = matcher.start()
             val endInText = matcher.end()
+            if (webUrlRanges.any { (urlStart, urlEnd) -> urlStart < startInText && urlEnd > startInText }) {
+                continue
+            }
             val emailAddress = text.substring(startInText, endInText)
             addStringAnnotation(
                 MatrixBodyAnnotations.MAIL_ADDRESS,

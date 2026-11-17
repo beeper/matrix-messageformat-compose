@@ -140,6 +140,14 @@ class MarkdownSourceAnnotatorTest {
     }
 
     @Test
+    fun addressLikeUrlPathStaysPartOfTheUrl() {
+        val url = "https://mastodon.social/@alice@example.org/115555"
+        val result = annotate("$url and bob@example.org")
+        assertEquals(listOf(url), result.annotated(MatrixBodyAnnotations.WEB_LINK).map { it.first })
+        assertEquals(listOf("bob@example.org"), result.annotated(MatrixBodyAnnotations.MAIL_ADDRESS).map { it.first })
+    }
+
+    @Test
     fun spoilers() {
         val plain = annotate("||secret||")
         assertEquals(listOf("secret"), plain.annotated(MatrixBodyAnnotations.SPAN).map { it.first })
