@@ -141,7 +141,7 @@
   },
   {
     "markdown": "~~~\nunclosed",
-    "html": "<pre><code>unclosed\n</code></pre>"
+    "html": "~~~<br>\nunclosed"
   },
   {
     "markdown": "> ```\n> x\n> ```",

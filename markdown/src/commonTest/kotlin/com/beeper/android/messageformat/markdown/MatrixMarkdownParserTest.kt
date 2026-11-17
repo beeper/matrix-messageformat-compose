@@ -52,6 +52,16 @@ class MatrixMarkdownParserTest {
     }
 
     @Test
+    fun tildeFencesFollowTheBacktickRules() {
+        assertEquals("<pre><code>x\n</code></pre>", html("~~~\nx\n~~~"))
+        assertEquals("<pre><code class=\"language-kotlin\">x\n</code></pre>", html("~~~kotlin\nx\n~~~"))
+        assertEquals("<pre><code>one two\nx\n</code></pre>", html("~~~one two\nx\n~~~"))
+        assertEquals("<pre><code>x\n</code></pre>", html("~~~\nx~~~"))
+        assertEquals("~~~one two~~~", html("~~~one two~~~"))
+        assertEquals("~~~<br>unclosed", html("~~~\nunclosed"))
+    }
+
+    @Test
     fun links() {
         assertEquals("[site](https://example.org/)", html("[site](https://example.org/)", emptySet()))
         assertEquals("&lt;https://example.org/&gt;", html("<https://example.org/>", emptySet()))

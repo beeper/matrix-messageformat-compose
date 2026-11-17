@@ -12,8 +12,8 @@ import org.intellij.markdown.parser.markerblocks.MarkerBlockProvider
 import org.intellij.markdown.parser.sequentialparsers.SequentialParser
 
 /**
- * Opens code fences. Text after a backtick fence is a language only when it is a single word,
- * otherwise it is the first line of code, and an unclosed backtick fence is not a code block.
+ * Opens code fences. Text after the opening fence is a language only when it is a single word,
+ * otherwise it is the first line of code, and an unclosed fence is not a code block.
  */
 internal class MatrixCodeFenceProvider : MarkerBlockProvider<MarkerProcessor.StateInfo> {
 
@@ -33,7 +33,7 @@ internal class MatrixCodeFenceProvider : MarkerBlockProvider<MarkerProcessor.Sta
     private fun opening(pos: LookaheadText.Position, constraints: MarkdownConstraints): MatrixCodeFence.Opening? {
         if (!MarkerBlockProvider.isStartOfLineWithConstraints(pos, constraints)) return null
         val opening = MatrixCodeFence.opening(pos.currentLineFromPosition) ?: return null
-        if (opening.isBacktick && !hasClosingFence(pos, constraints, opening.delimiter)) return null
+        if (!hasClosingFence(pos, constraints, opening.delimiter)) return null
         return opening
     }
 

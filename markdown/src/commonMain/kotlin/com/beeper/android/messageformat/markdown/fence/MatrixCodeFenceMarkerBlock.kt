@@ -14,7 +14,7 @@ import org.intellij.markdown.parser.markerblocks.MarkerBlockImpl
 import org.intellij.markdown.parser.sequentialparsers.SequentialParser
 import kotlin.math.min
 
-/** The CommonMark code fence block, except that a backtick fence also closes at the end of a content line. */
+/** The CommonMark code fence block, except that a fence also closes at the end of a content line. */
 internal class MatrixCodeFenceMarkerBlock(
     constraints: MarkdownConstraints,
     private val productionHolder: ProductionHolder,
