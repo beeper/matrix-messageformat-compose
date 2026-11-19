@@ -10,6 +10,7 @@ internal class AnyCaseAutolinkLexer(private val delegate: GeneratedLexer) : Gene
 
     private var buffer: CharSequence = ""
     private var lowercase: CharSequence = ""
+    private var bufferStart = 0
     private var bufferEnd = 0
     private var autolinkEnd = -1
 
@@ -22,7 +23,8 @@ internal class AnyCaseAutolinkLexer(private val delegate: GeneratedLexer) : Gene
 
     override fun reset(buffer: CharSequence, start: Int, end: Int, initialState: Int) {
         this.buffer = buffer
-        lowercase = String(CharArray(buffer.length) { buffer[it].lowercaseChar() })
+        lowercase = String(CharArray(buffer.length) { buffer[it].let { c -> if (c in 'A'..'Z') c + ('a' - 'A') else c } })
+        bufferStart = start
         bufferEnd = end
         autolinkEnd = -1
         tokenStart = start
@@ -41,13 +43,23 @@ internal class AnyCaseAutolinkLexer(private val delegate: GeneratedLexer) : Gene
         tokenStart = delegate.tokenStart
         tokenEnd = delegate.tokenEnd
         val state = delegate.state
-        if (type != MarkdownTokenTypes.TEXT || state != _GFMLexer.AFTER_LINE_START) return type
+        if (state != _GFMLexer.AFTER_LINE_START) return type
+        if (type == GFMTokenTypes.GFM_AUTOLINK) {
+            val end = markerEnd(tokenStart, tokenEnd)
+            if (end < tokenEnd) {
+                tokenEnd = end
+                delegate.reset(buffer, end, bufferEnd, state)
+            }
+            return type
+        }
+        if (type != MarkdownTokenTypes.TEXT) return type
         for (start in tokenStart until tokenEnd) {
             if (AUTOLINK_PREFIXES.none { lowercase.startsWith(it, start) }) continue
+            if (start > bufferStart && buffer[start - 1].isLetterOrDigit()) continue
             delegate.reset(lowercase, start, bufferEnd, state)
             val isAutolink = delegate.advance() == GFMTokenTypes.GFM_AUTOLINK
-            val end = delegate.tokenEnd
-            delegate.reset(buffer, if (isAutolink) end else tokenEnd, bufferEnd, state)
+            val end = if (isAutolink) markerEnd(start, delegate.tokenEnd) else tokenEnd
+            delegate.reset(buffer, end, bufferEnd, state)
             if (!isAutolink) continue
             if (start == tokenStart) {
                 tokenEnd = end
@@ -60,7 +72,18 @@ internal class AnyCaseAutolinkLexer(private val delegate: GeneratedLexer) : Gene
         return type
     }
 
+    private fun markerEnd(start: Int, end: Int): Int {
+        if (start <= bufferStart) return end
+        val marker = buffer[start - 1]
+        if (marker !in MARKERS || (end < bufferEnd && buffer[end] == marker)) return end
+        var cut = buffer.lastIndexOf(marker, end - 1)
+        if (cut <= start) return end
+        while (buffer[cut - 1] == marker) cut--
+        return cut
+    }
+
     private companion object {
         val AUTOLINK_PREFIXES = listOf("http://", "https://", "ftp://", "file://", "www.")
+        const val MARKERS = "*_~|"
     }
 }
