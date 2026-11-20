@@ -8,7 +8,6 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextGeometricTransform
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.isSpecified
@@ -94,7 +93,7 @@ internal class ComposerRenderer(
     }
 }
 
-/** Sizes one [EMOTE_PLACEHOLDER] to [size] through font size and horizontal text scale. */
+/** Sizes one [EMOTE_PLACEHOLDER] to [size]. */
 internal fun emotePlaceholderStyle(
     size: MatrixComposerEmoteSize,
     textStyle: TextStyle,
@@ -104,18 +103,10 @@ internal fun emotePlaceholderStyle(
     val baseFontSize = textStyle.fontSize.takeIf { it.isSpecified } ?: DEFAULT_FONT_SIZE
     val height = size.height.resolve(baseFontSize)
     val width = size.width.resolve(baseFontSize)
-    // The span overrides the style's letter spacing
     val glyphStyle = textStyle.copy(fontSize = height, letterSpacing = 0.sp, textGeometricTransform = null)
-    val advance = textMeasurer.measure(EMOTE_PLACEHOLDER.toString(), glyphStyle).getBoundingBox(0).width *
-        spanScaleXBase(textStyle)
+    val advance = textMeasurer.measure(EMOTE_PLACEHOLDER.toString(), glyphStyle).getBoundingBox(0).width
     val widthPx = density.run { width.toPx() }
-    // Letter spacing would come out short: Android drops some of it at the edges of a run, and the placeholder is its own run
-    val scaleX = if (advance > 0f) widthPx / advance else 1f
-    return SpanStyle(
-        fontSize = height,
-        letterSpacing = 0.sp,
-        textGeometricTransform = TextGeometricTransform(scaleX = scaleX),
-    )
+    return SpanStyle(fontSize = height).merge(widenGlyph(advance, widthPx, textStyle, density))
 }
 
 private fun TextUnit.resolve(fontSize: TextUnit): TextUnit = if (isEm) fontSize * value else this
@@ -129,5 +120,5 @@ private val LinkAnnotation.linkStyles
         else -> null
     }
 
-/** The scale of [textStyle] that a span's [TextGeometricTransform.scaleX] multiplies, or 1 where the span's scale replaces it. */
-internal expect fun spanScaleXBase(textStyle: TextStyle): Float
+/** A span style that widens one glyph of [advancePx] in [textStyle] to [widthPx]. */
+internal expect fun widenGlyph(advancePx: Float, widthPx: Float, textStyle: TextStyle, density: Density): SpanStyle
