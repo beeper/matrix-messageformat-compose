@@ -37,6 +37,14 @@ data class InlineImageInfo(
     /** Description */
     val alt: String?,
 ) {
+    /** Desired width / height, if both are known */
+    val ratio: Float?
+        get() {
+            val w = width?.takeIf { it > 0 } ?: return null
+            val h = height?.takeIf { it > 0 } ?: return null
+            return w.toFloat() / h
+        }
+
     fun placeholder(
         defaultHeight: TextUnit,
         minWidthSp: Int,
@@ -75,7 +83,7 @@ fun Map<String, InlineImageInfo>.toInlineContent(
     val rawSize = actualImageSizes[info.uri]?.takeIf { it.width > 0 && it.height > 0 }
     // Actual image size wins over the declared one, in case the event's attributes are wrong
     val emoteRatio = if (info.isEmote) {
-        rawSize?.let { it.width.toFloat() / it.height } ?: info.declaredRatio()
+        rawSize?.let { it.width.toFloat() / it.height } ?: info.ratio
     } else {
         null
     }
@@ -136,12 +144,6 @@ fun Map<String, InlineImageInfo>.toInlineContent(
         }
         drawContent(info, modifier)
     }
-}
-
-private fun InlineImageInfo.declaredRatio(): Float? {
-    val w = width?.takeIf { it > 0 } ?: return null
-    val h = height?.takeIf { it > 0 } ?: return null
-    return w.toFloat() / h
 }
 
 /** Treat this Int as SP but calculate it to DP */
