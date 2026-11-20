@@ -37,6 +37,14 @@ data class InlineImageInfo(
     /** Description */
     val alt: String?,
 ) {
+    /** Desired width / height, if both are known */
+    val ratio: Float?
+        get() {
+            val w = width?.takeIf { it > 0 } ?: return null
+            val h = height?.takeIf { it > 0 } ?: return null
+            return w.toFloat() / h
+        }
+
     fun placeholder(
         defaultHeight: TextUnit,
         minWidthSp: Int,
@@ -73,9 +81,15 @@ fun Map<String, InlineImageInfo>.toInlineContent(
     drawContent: @Composable (InlineImageInfo, Modifier) -> Unit
 ) = mapValues { (_, info) ->
     val rawSize = actualImageSizes[info.uri]?.takeIf { it.width > 0 && it.height > 0 }
-    val emoteRenderSize = rawSize?.takeIf { info.isEmote }?.let {
+    // Actual image size wins over the declared one, in case the event's attributes are wrong
+    val emoteRatio = if (info.isEmote) {
+        rawSize?.let { it.width.toFloat() / it.height } ?: info.ratio
+    } else {
+        null
+    }
+    val emoteRenderSize = emoteRatio?.let { ratio ->
         val renderHeight = density.run { defaultHeight.toDp() }.coerceIn(minHeight, maxHeight)
-        val renderWidth = (renderHeight * it.width.toFloat() / it.height).coerceIn(minWidth, maxWidth)
+        val renderWidth = (renderHeight * ratio).coerceIn(minWidth, maxWidth)
         renderWidth to renderHeight
     }
     val placeholder = if (emoteRenderSize != null) {
