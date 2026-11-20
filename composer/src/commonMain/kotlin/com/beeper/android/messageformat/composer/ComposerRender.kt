@@ -107,8 +107,8 @@ internal fun emotePlaceholderStyle(
     val baseFontSize = textStyle.fontSize.takeIf { it.isSpecified } ?: DEFAULT_FONT_SIZE
     val height = size.height.resolve(baseFontSize)
     val width = size.width.resolve(baseFontSize)
-    // The span replaces the text style's letter spacing and scale, so the glyph is measured without either
-    val glyphStyle = textStyle.copy(fontSize = height, letterSpacing = 0.sp, textGeometricTransform = null)
+    // The span's letter spacing replaces the style's, but on Android its scale multiplies the style's
+    val glyphStyle = textStyle.copy(fontSize = height, letterSpacing = 0.sp)
     val advance = textMeasurer.measure(EMOTE_PLACEHOLDER.toString(), glyphStyle).getBoundingBox(0).width
     val widthPx = density.run { width.toPx() }
     val scaleX = if (advance > 0f) widthPx / advance else 1f
