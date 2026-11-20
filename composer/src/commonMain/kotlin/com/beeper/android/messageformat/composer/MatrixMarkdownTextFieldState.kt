@@ -149,10 +149,8 @@ class MatrixMarkdownTextFieldState(
     }
 
     /**
-     * Replaces each entity with what [transform] returns for it, keeping the entity's range, for details only
-     * known after the entity was added, such as an image size. The text and selection stay as they are, no undo
-     * step is added, and texts that undo and redo return to get the same replacement. Changes that the user
-     * should be able to undo go through [setContent] instead.
+     * Update each entity via [transform] for details we may learn asynchronously, such as inline image size.
+     * Use [setContent] for anything that changes the meaning or position rather than enriching metadata.
      */
     fun updateEntities(transform: (MatrixInlineEntity) -> MatrixInlineEntity) {
         val current = content
