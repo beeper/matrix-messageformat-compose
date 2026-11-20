@@ -107,9 +107,10 @@ internal fun emotePlaceholderStyle(
     val baseFontSize = textStyle.fontSize.takeIf { it.isSpecified } ?: DEFAULT_FONT_SIZE
     val height = size.height.resolve(baseFontSize)
     val width = size.width.resolve(baseFontSize)
-    // The span's letter spacing replaces the style's, but on Android its scale multiplies the style's
-    val glyphStyle = textStyle.copy(fontSize = height, letterSpacing = 0.sp)
-    val advance = textMeasurer.measure(EMOTE_PLACEHOLDER.toString(), glyphStyle).getBoundingBox(0).width
+    // The span's letter spacing and scale replace the style's, except for the scale where spanScaleXBase says
+    val glyphStyle = textStyle.copy(fontSize = height, letterSpacing = 0.sp, textGeometricTransform = null)
+    val advance = textMeasurer.measure(EMOTE_PLACEHOLDER.toString(), glyphStyle).getBoundingBox(0).width *
+        spanScaleXBase(textStyle)
     val widthPx = density.run { width.toPx() }
     val scaleX = if (advance > 0f) widthPx / advance else 1f
     return SpanStyle(
@@ -129,3 +130,6 @@ private val LinkAnnotation.linkStyles
         is LinkAnnotation.Clickable -> styles
         else -> null
     }
+
+/** The horizontal scale of [textStyle] that a span's [TextGeometricTransform.scaleX] is multiplied with, 1 where it replaces it. */
+internal expect fun spanScaleXBase(textStyle: TextStyle): Float
