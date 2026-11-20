@@ -151,7 +151,8 @@ class MatrixMarkdownTextFieldState(
     /**
      * Replaces each entity with what [transform] returns for it, at the entity's range, without changing the
      * text, the selection or the undo history. For details that are only known after the entity was added,
-     * so they also apply to the texts that undo and redo return to.
+     * so they also apply to the texts that undo and redo return to. Changes that the user should be able to
+     * undo go through [setContent] instead.
      */
     fun updateEntities(transform: (MatrixInlineEntity) -> MatrixInlineEntity) {
         val current = content
