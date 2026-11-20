@@ -106,7 +106,7 @@ internal fun emotePlaceholderStyle(
     val glyphStyle = textStyle.copy(fontSize = height, letterSpacing = 0.sp, textGeometricTransform = null)
     val advance = textMeasurer.measure(EMOTE_PLACEHOLDER.toString(), glyphStyle).getBoundingBox(0).width
     val widthPx = density.run { width.toPx() }
-    return SpanStyle(fontSize = height).merge(widenGlyph(advance, widthPx, textStyle, density))
+    return SpanStyle(fontSize = height).merge(glyphWidthStyle(advance, widthPx, textStyle, density))
 }
 
 private fun TextUnit.resolve(fontSize: TextUnit): TextUnit = if (isEm) fontSize * value else this
@@ -120,5 +120,10 @@ private val LinkAnnotation.linkStyles
         else -> null
     }
 
-/** A span style that widens one glyph of [advancePx] in [textStyle] to [widthPx]. */
-internal expect fun widenGlyph(advancePx: Float, widthPx: Float, textStyle: TextStyle, density: Density): SpanStyle
+/** A span style that makes one glyph of [naturalWidthPx] in [textStyle] [targetWidthPx] wide. */
+internal expect fun glyphWidthStyle(
+    naturalWidthPx: Float,
+    targetWidthPx: Float,
+    textStyle: TextStyle,
+    density: Density,
+): SpanStyle

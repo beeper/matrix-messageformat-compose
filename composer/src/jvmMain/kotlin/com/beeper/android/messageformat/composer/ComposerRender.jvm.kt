@@ -6,5 +6,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.sp
 
 // Skiko ignores TextGeometricTransform, but applies letter spacing in full
-internal actual fun widenGlyph(advancePx: Float, widthPx: Float, textStyle: TextStyle, density: Density): SpanStyle =
-    SpanStyle(letterSpacing = ((widthPx - advancePx) / (density.density * density.fontScale)).sp)
+internal actual fun glyphWidthStyle(
+    naturalWidthPx: Float,
+    targetWidthPx: Float,
+    textStyle: TextStyle,
+    density: Density,
+): SpanStyle = SpanStyle(letterSpacing = ((targetWidthPx - naturalWidthPx) / (density.density * density.fontScale)).sp)
