@@ -8,6 +8,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextGeometricTransform
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.isSpecified
@@ -93,7 +94,10 @@ internal class ComposerRenderer(
     }
 }
 
-/** Sizes one [EMOTE_PLACEHOLDER] to [size] through font size and letter spacing. */
+/**
+ * Sizes one [EMOTE_PLACEHOLDER] to [size] through font size and horizontal text scale.
+ * Letter spacing can't do this: Android drops part of it at the edges of a run, and the placeholder is a run of its own.
+ */
 internal fun emotePlaceholderStyle(
     size: MatrixComposerEmoteSize,
     textStyle: TextStyle,
@@ -103,12 +107,16 @@ internal fun emotePlaceholderStyle(
     val baseFontSize = textStyle.fontSize.takeIf { it.isSpecified } ?: DEFAULT_FONT_SIZE
     val height = size.height.resolve(baseFontSize)
     val width = size.width.resolve(baseFontSize)
-    // The span's letter spacing replaces that of the text style, so the glyph is measured without any
-    val glyphStyle = textStyle.copy(fontSize = height, letterSpacing = 0.sp)
-    val advance = textMeasurer.measure(EMOTE_PLACEHOLDER.toString(), glyphStyle).size.width
+    // The span replaces the text style's letter spacing and scale, so the glyph is measured without either
+    val glyphStyle = textStyle.copy(fontSize = height, letterSpacing = 0.sp, textGeometricTransform = null)
+    val advance = textMeasurer.measure(EMOTE_PLACEHOLDER.toString(), glyphStyle).getBoundingBox(0).width
     val widthPx = density.run { width.toPx() }
-    val letterSpacing = ((widthPx - advance) / (density.density * density.fontScale)).sp
-    return SpanStyle(fontSize = height, letterSpacing = letterSpacing)
+    val scaleX = if (advance > 0f) widthPx / advance else 1f
+    return SpanStyle(
+        fontSize = height,
+        letterSpacing = 0.sp,
+        textGeometricTransform = TextGeometricTransform(scaleX = scaleX),
+    )
 }
 
 private fun TextUnit.resolve(fontSize: TextUnit): TextUnit = if (isEm) fontSize * value else this
