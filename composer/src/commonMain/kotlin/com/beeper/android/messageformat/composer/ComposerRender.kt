@@ -93,7 +93,7 @@ internal class ComposerRenderer(
     }
 }
 
-/** Sizes one [EMOTE_PLACEHOLDER] to [size] through font size and letter spacing. */
+/** Sizes one [EMOTE_PLACEHOLDER] to [size]. */
 internal fun emotePlaceholderStyle(
     size: MatrixComposerEmoteSize,
     textStyle: TextStyle,
@@ -103,12 +103,10 @@ internal fun emotePlaceholderStyle(
     val baseFontSize = textStyle.fontSize.takeIf { it.isSpecified } ?: DEFAULT_FONT_SIZE
     val height = size.height.resolve(baseFontSize)
     val width = size.width.resolve(baseFontSize)
-    // The span's letter spacing replaces that of the text style, so the glyph is measured without any
-    val glyphStyle = textStyle.copy(fontSize = height, letterSpacing = 0.sp)
-    val advance = textMeasurer.measure(EMOTE_PLACEHOLDER.toString(), glyphStyle).size.width
+    val glyphStyle = textStyle.copy(fontSize = height, letterSpacing = 0.sp, textGeometricTransform = null)
+    val advance = textMeasurer.measure(EMOTE_PLACEHOLDER.toString(), glyphStyle).getBoundingBox(0).width
     val widthPx = density.run { width.toPx() }
-    val letterSpacing = ((widthPx - advance) / (density.density * density.fontScale)).sp
-    return SpanStyle(fontSize = height, letterSpacing = letterSpacing)
+    return SpanStyle(fontSize = height).merge(glyphWidthStyle(advance, widthPx, textStyle, density))
 }
 
 private fun TextUnit.resolve(fontSize: TextUnit): TextUnit = if (isEm) fontSize * value else this
@@ -121,3 +119,11 @@ private val LinkAnnotation.linkStyles
         is LinkAnnotation.Clickable -> styles
         else -> null
     }
+
+/** A span style that makes one glyph of [naturalWidthPx] in [textStyle] [targetWidthPx] wide. */
+internal expect fun glyphWidthStyle(
+    naturalWidthPx: Float,
+    targetWidthPx: Float,
+    textStyle: TextStyle,
+    density: Density,
+): SpanStyle
