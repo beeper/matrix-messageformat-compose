@@ -107,7 +107,7 @@ internal fun emotePlaceholderStyle(
     val baseFontSize = textStyle.fontSize.takeIf { it.isSpecified } ?: DEFAULT_FONT_SIZE
     val height = size.height.resolve(baseFontSize)
     val width = size.width.resolve(baseFontSize)
-    // The span's letter spacing and scale replace the style's, except for the scale where spanScaleXBase says
+    // The span overrides the style's letter spacing
     val glyphStyle = textStyle.copy(fontSize = height, letterSpacing = 0.sp, textGeometricTransform = null)
     val advance = textMeasurer.measure(EMOTE_PLACEHOLDER.toString(), glyphStyle).getBoundingBox(0).width *
         spanScaleXBase(textStyle)
@@ -131,5 +131,5 @@ private val LinkAnnotation.linkStyles
         else -> null
     }
 
-/** The horizontal scale of [textStyle] that a span's [TextGeometricTransform.scaleX] is multiplied with, 1 where it replaces it. */
+/** The scale of [textStyle] that a span's [TextGeometricTransform.scaleX] multiplies, or 1 where the span's scale replaces it. */
 internal expect fun spanScaleXBase(textStyle: TextStyle): Float
