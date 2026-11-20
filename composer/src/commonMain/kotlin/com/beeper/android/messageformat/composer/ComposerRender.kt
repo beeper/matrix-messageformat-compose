@@ -94,10 +94,7 @@ internal class ComposerRenderer(
     }
 }
 
-/**
- * Sizes one [EMOTE_PLACEHOLDER] to [size] through font size and horizontal text scale.
- * Letter spacing can't do this: Android drops part of it at the edges of a run, and the placeholder is a run of its own.
- */
+/** Sizes one [EMOTE_PLACEHOLDER] to [size] through font size and horizontal text scale. */
 internal fun emotePlaceholderStyle(
     size: MatrixComposerEmoteSize,
     textStyle: TextStyle,
@@ -112,6 +109,7 @@ internal fun emotePlaceholderStyle(
     val advance = textMeasurer.measure(EMOTE_PLACEHOLDER.toString(), glyphStyle).getBoundingBox(0).width *
         spanScaleXBase(textStyle)
     val widthPx = density.run { width.toPx() }
+    // Letter spacing would come out short: Android drops some of it at the edges of a run, and the placeholder is its own run
     val scaleX = if (advance > 0f) widthPx / advance else 1f
     return SpanStyle(
         fontSize = height,
