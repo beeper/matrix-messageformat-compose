@@ -33,7 +33,7 @@ internal class MatrixMarkdownFlavour(
     override val markerProcessorFactory: MarkerProcessorFactory = MatrixMarkdownMarkerProcessor.Factory(features)
 
     override fun createInlinesLexer(): MarkdownLexer {
-        val lexer: GeneratedLexer = _GFMLexer()
+        val lexer: GeneratedLexer = AnyCaseAutolinkLexer(_GFMLexer())
         return MarkdownLexer(if (MarkdownFeature.SPOILER in features) PipeSplittingLexer(lexer) else lexer)
     }
 
