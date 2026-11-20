@@ -46,6 +46,9 @@ sealed interface MatrixInlineEntity {
         val packId: String? = null,
         /** The emote's description from its image pack, sent as the image's alt text. */
         val body: String? = null,
+        /** The emote image's size from its image pack, used to send its aspect ratio. */
+        val width: Int? = null,
+        val height: Int? = null,
     ) : MatrixInlineEntity {
         override fun moved(start: Int, end: Int) = copy(start = start, end = end)
     }

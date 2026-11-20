@@ -5,6 +5,7 @@ import com.beeper.android.messageformat.MatrixPatterns
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
 import org.intellij.markdown.html.DUMMY_ATTRIBUTES_CUSTOMIZER
 import org.intellij.markdown.html.HtmlGenerator
+import kotlin.math.roundToInt
 
 /** A tag renderer that prints masked entities as their Matrix HTML. */
 internal class MatrixInlineEntityTagRenderer(
@@ -23,16 +24,27 @@ internal fun MatrixInlineEntity.toHtml(visibleText: String): String = when (this
     }
     is MatrixInlineEntity.RoomMention -> escapeHtml(sentText(visibleText))
     is MatrixInlineEntity.CustomEmote ->
-        customEmoteHtml(escapeHtml(mxcUrl), escapeHtml(shortcode), body?.let(::escapeHtml))
+        customEmoteHtml(escapeHtml(mxcUrl), escapeHtml(shortcode), body?.let(::escapeHtml), width, height)
 }
 
 /**
  * The `<img>` the Matrix spec defines for custom emotes, from already HTML-escaped values. The alt text is
  * [body], or [shortcode] when there is none.
  */
-internal fun customEmoteHtml(mxcUrl: CharSequence, shortcode: CharSequence, body: CharSequence?): String {
+internal fun customEmoteHtml(
+    mxcUrl: CharSequence,
+    shortcode: CharSequence,
+    body: CharSequence?,
+    imageWidth: Int? = null,
+    imageHeight: Int? = null,
+): String {
     val alt = body?.takeIf { it.isNotBlank() } ?: shortcode
-    return "<img src=\"$mxcUrl\" alt=\"$alt\" title=\"$shortcode\" data-mx-emoticon height=\"$CUSTOM_EMOTE_HEIGHT\">"
+    val width = if (imageWidth != null && imageHeight != null && imageWidth > 0 && imageHeight > 0) {
+        " width=\"${(CUSTOM_EMOTE_HEIGHT * imageWidth.toFloat() / imageHeight).roundToInt().coerceAtLeast(1)}\""
+    } else {
+        ""
+    }
+    return "<img src=\"$mxcUrl\" alt=\"$alt\" title=\"$shortcode\" data-mx-emoticon$width height=\"$CUSTOM_EMOTE_HEIGHT\">"
 }
 
 private const val CUSTOM_EMOTE_HEIGHT = 32

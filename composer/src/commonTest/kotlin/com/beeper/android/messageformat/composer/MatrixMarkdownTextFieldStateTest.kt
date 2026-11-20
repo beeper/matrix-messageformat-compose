@@ -273,7 +273,7 @@ class MatrixMarkdownTextFieldStateTest {
         val entities = listOf(
             MatrixInlineEntity.UserMention(0, 6, "@alice:example.org", contentText = "Alice A."),
             MatrixInlineEntity.RoomMention(7, 12),
-            MatrixInlineEntity.CustomEmote(13, 18, "cat", "mxc://x/cat", packId = "pack", body = "A cat"),
+            MatrixInlineEntity.CustomEmote(13, 18, "cat", "mxc://x/cat", packId = "pack", body = "A cat", width = 200, height = 100),
         )
         val state = MatrixMarkdownTextFieldState("@Alice @room :cat: hi", entities)
         state.edit { selection = TextRange(19, 21) }
