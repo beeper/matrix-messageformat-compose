@@ -120,6 +120,15 @@ class MatrixInlineEntityTest {
     }
 
     @Test
+    fun emoteImageSizeBecomesWidthAtSentHeight() {
+        val emote = MatrixInlineEntity.CustomEmote(0, 5, "cat", "mxc://x/cat", width = 200, height = 100)
+        assertEquals(
+            "<img src=\"mxc://x/cat\" alt=\"cat\" title=\"cat\" data-mx-emoticon width=\"64\" height=\"32\">",
+            parser.toHtml(":cat:", listOf(emote)),
+        )
+    }
+
+    @Test
     fun draftWithOnlyRoomMentionStaysPlain() {
         val draft = parser.toDraft("hey @everyone", listOf(MatrixInlineEntity.RoomMention(4, 13)))
         assertEquals("hey @room", draft.body)
