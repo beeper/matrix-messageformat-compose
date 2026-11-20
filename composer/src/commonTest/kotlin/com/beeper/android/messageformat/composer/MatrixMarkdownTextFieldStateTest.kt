@@ -269,6 +269,37 @@ class MatrixMarkdownTextFieldStateTest {
     }
 
     @Test
+    fun updateEntitiesKeepsTextSelectionAndUndo() {
+        val emote = MatrixInlineEntity.CustomEmote(3, 8, "cat", "mxc://x/cat")
+        val state = state("hi :cat: there", emote, alice(9, 14))
+        state.edit { replace(14, 14, "!") }
+        state.edit { selection = TextRange(2) }
+        val undoBefore = state.undoState.canUndo
+
+        state.updateEntities { if (it is MatrixInlineEntity.CustomEmote) it.copy(width = 200, height = 100) else it }
+
+        state.assertState("hi :cat: there!", emote.copy(width = 200, height = 100), alice(9, 14))
+        assertEquals(TextRange(2), state.selection)
+        assertEquals(undoBefore, state.undoState.canUndo)
+        state.edit { replace(0, 0, "oh ") }
+        state.assertState("oh hi :cat: there!", emote.copy(start = 6, end = 11, width = 200, height = 100), alice(12, 17))
+    }
+
+    @Test
+    fun updatedEntitiesSurviveUndoAndRedo() {
+        val state = state("hi ", *emptyArray())
+        state.insertEntity(TextRange(3), ":cat:") { start, end -> MatrixInlineEntity.CustomEmote(start, end, "cat", "mxc://x/cat") }
+        state.input { replace(length, length, "x") }
+        state.updateEntities { if (it is MatrixInlineEntity.CustomEmote) it.copy(width = 200, height = 100) else it }
+        val sized = MatrixInlineEntity.CustomEmote(3, 8, "cat", "mxc://x/cat", width = 200, height = 100)
+
+        state.textFieldState.undoState.undo()
+        state.assertState("hi :cat: ", sized)
+        state.textFieldState.undoState.redo()
+        state.assertState("hi :cat: x", sized)
+    }
+
+    @Test
     fun saverRestoresTextEntitiesAndSelection() {
         val entities = listOf(
             MatrixInlineEntity.UserMention(0, 6, "@alice:example.org", contentText = "Alice A."),

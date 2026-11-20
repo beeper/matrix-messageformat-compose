@@ -148,6 +148,19 @@ class MatrixMarkdownTextFieldState(
         }
     }
 
+    /**
+     * Update each entity via [transform] for details we may learn asynchronously, such as inline image size.
+     * Use [setContent] for anything that changes the meaning or position rather than enriching metadata.
+     */
+    fun updateEntities(transform: (MatrixInlineEntity) -> MatrixInlineEntity) {
+        val current = content
+        val updated = current.withEntitiesUpdated(transform)
+        if (updated == current) return
+        aligned = updated
+        realigned = null
+        history.update { it.withEntitiesUpdated(transform) }
+    }
+
     private fun TextFieldBuffer.update(stepped: Boolean) {
         val previous = contentFor(originalText)
         align(previous, reconcile(previous.entities, stepped), asCharSequence())
@@ -238,6 +251,16 @@ fun rememberMatrixMarkdownTextFieldState(
 private fun MatrixMarkdownContent.entitiesAfterChangeTo(text: String): List<MatrixInlineEntity> =
     EntityReconciler.reconcileUnobserved(entities, this.text, text)
 
+private fun MatrixMarkdownContent.withEntitiesUpdated(
+    transform: (MatrixInlineEntity) -> MatrixInlineEntity,
+): MatrixMarkdownContent {
+    val updated = entities.map { entity ->
+        val result = transform(entity)
+        if (result.start == entity.start && result.end == entity.end) result else result.moved(entity.start, entity.end)
+    }
+    return if (updated == entities) this else MatrixMarkdownContent(text, updated)
+}
+
 /**
  * The contents before and after each recent edit that changed entities in a way the two texts do not show,
  * such as removing one. A text that undo or redo returns to gets its entities back from here.
@@ -258,6 +281,10 @@ private class ContentHistory {
             // A recorded text that an edit arrives at again may have other entities by now
             contents[content.text] = content
         }
+    }
+
+    fun update(transform: (MatrixMarkdownContent) -> MatrixMarkdownContent) {
+        contents.replaceAll { _, content -> transform(content) }
     }
 
     private fun put(content: MatrixMarkdownContent) {
