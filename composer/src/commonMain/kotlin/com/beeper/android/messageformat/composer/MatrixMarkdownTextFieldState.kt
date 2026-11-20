@@ -148,6 +148,23 @@ class MatrixMarkdownTextFieldState(
         }
     }
 
+    /**
+     * Replaces each entity with what [transform] returns for it, at the entity's range, without changing the
+     * text, the selection or the undo history. For details that are only known after the entity was added.
+     */
+    fun updateEntities(transform: (MatrixInlineEntity) -> MatrixInlineEntity) {
+        val current = content
+        val updated = current.entities.map { entity ->
+            val result = transform(entity)
+            if (result.start == entity.start && result.end == entity.end) result else result.moved(entity.start, entity.end)
+        }
+        if (updated == current.entities) return
+        val content = MatrixMarkdownContent(current.text, updated)
+        aligned = content
+        realigned = null
+        history.replace(content)
+    }
+
     private fun TextFieldBuffer.update(stepped: Boolean) {
         val previous = contentFor(originalText)
         align(previous, reconcile(previous.entities, stepped), asCharSequence())
@@ -258,6 +275,11 @@ private class ContentHistory {
             // A recorded text that an edit arrives at again may have other entities by now
             contents[content.text] = content
         }
+    }
+
+    /** Updates the entities recorded for the text of [content], if any. */
+    fun replace(content: MatrixMarkdownContent) {
+        if (content.text in contents) contents[content.text] = content
     }
 
     private fun put(content: MatrixMarkdownContent) {
