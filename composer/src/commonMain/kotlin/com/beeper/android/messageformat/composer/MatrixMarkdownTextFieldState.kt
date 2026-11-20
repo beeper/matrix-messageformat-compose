@@ -150,19 +150,16 @@ class MatrixMarkdownTextFieldState(
 
     /**
      * Replaces each entity with what [transform] returns for it, at the entity's range, without changing the
-     * text, the selection or the undo history. For details that are only known after the entity was added.
+     * text, the selection or the undo history. For details that are only known after the entity was added,
+     * so they also apply to the texts that undo and redo return to.
      */
     fun updateEntities(transform: (MatrixInlineEntity) -> MatrixInlineEntity) {
         val current = content
-        val updated = current.entities.map { entity ->
-            val result = transform(entity)
-            if (result.start == entity.start && result.end == entity.end) result else result.moved(entity.start, entity.end)
-        }
-        if (updated == current.entities) return
-        val content = MatrixMarkdownContent(current.text, updated)
-        aligned = content
+        val updated = current.withEntitiesUpdated(transform)
+        if (updated == current) return
+        aligned = updated
         realigned = null
-        history.replace(content)
+        history.update { it.withEntitiesUpdated(transform) }
     }
 
     private fun TextFieldBuffer.update(stepped: Boolean) {
@@ -255,6 +252,16 @@ fun rememberMatrixMarkdownTextFieldState(
 private fun MatrixMarkdownContent.entitiesAfterChangeTo(text: String): List<MatrixInlineEntity> =
     EntityReconciler.reconcileUnobserved(entities, this.text, text)
 
+private fun MatrixMarkdownContent.withEntitiesUpdated(
+    transform: (MatrixInlineEntity) -> MatrixInlineEntity,
+): MatrixMarkdownContent {
+    val updated = entities.map { entity ->
+        val result = transform(entity)
+        if (result.start == entity.start && result.end == entity.end) result else result.moved(entity.start, entity.end)
+    }
+    return if (updated == entities) this else MatrixMarkdownContent(text, updated)
+}
+
 /**
  * The contents before and after each recent edit that changed entities in a way the two texts do not show,
  * such as removing one. A text that undo or redo returns to gets its entities back from here.
@@ -277,9 +284,8 @@ private class ContentHistory {
         }
     }
 
-    /** Updates the entities recorded for the text of [content], if any. */
-    fun replace(content: MatrixMarkdownContent) {
-        if (content.text in contents) contents[content.text] = content
+    fun update(transform: (MatrixMarkdownContent) -> MatrixMarkdownContent) {
+        contents.replaceAll { _, content -> transform(content) }
     }
 
     private fun put(content: MatrixMarkdownContent) {
