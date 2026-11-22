@@ -3,6 +3,7 @@ package com.beeper.android.messageformat.composer
 import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.ui.text.TextRange
+import com.beeper.android.messageformat.markdown.ImagePackSource
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -304,7 +305,16 @@ class MatrixMarkdownTextFieldStateTest {
         val entities = listOf(
             MatrixInlineEntity.UserMention(0, 6, "@alice:example.org", contentText = "Alice A."),
             MatrixInlineEntity.RoomMention(7, 12),
-            MatrixInlineEntity.CustomEmote(13, 18, "cat", "mxc://x/cat", packId = "pack", body = "A cat", width = 200, height = 100),
+            MatrixInlineEntity.CustomEmote(
+                13,
+                18,
+                "cat",
+                "mxc://x/cat",
+                pack = ImagePackSource("!room:example.org", "cats", listOf("emoticon")),
+                body = "A cat",
+                width = 200,
+                height = 100,
+            ),
         )
         val state = MatrixMarkdownTextFieldState("@Alice @room :cat: hi", entities)
         state.edit { selection = TextRange(19, 21) }

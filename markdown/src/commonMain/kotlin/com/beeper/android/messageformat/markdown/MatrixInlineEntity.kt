@@ -43,7 +43,7 @@ sealed interface MatrixInlineEntity {
         override val end: Int,
         val shortcode: String,
         val mxcUrl: String,
-        val packId: String? = null,
+        val pack: ImagePackSource? = null,
         /** The emote's description from its image pack, sent as the image's alt text. */
         val body: String? = null,
         /** The emote image's size from its image pack, used to send its aspect ratio. */
@@ -53,6 +53,14 @@ sealed interface MatrixInlineEntity {
         override fun moved(start: Int, end: Int) = copy(start = start, end = end)
     }
 }
+
+/** The room image pack a custom emote was picked from, by the pack's state event. */
+data class ImagePackSource(
+    val roomId: String,
+    val stateKey: String,
+    /** The pack's `usage` values. */
+    val usage: List<String>? = null,
+)
 
 /** The entities that lie inside [text] without overlapping each other, in text order. */
 fun List<MatrixInlineEntity>.validIn(text: CharSequence): List<MatrixInlineEntity> {

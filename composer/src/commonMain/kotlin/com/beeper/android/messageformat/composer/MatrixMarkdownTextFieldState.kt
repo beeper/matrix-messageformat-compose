@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
 import com.beeper.android.messageformat.composer.EntityReconciler.reconcile
 import com.beeper.android.messageformat.composer.MarkReconciler.reconcileMarks
+import com.beeper.android.messageformat.markdown.ImagePackSource
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
 import com.beeper.android.messageformat.markdown.MatrixMarkdownContent
 
@@ -212,7 +213,7 @@ class MatrixMarkdownTextFieldState(
 private fun MatrixInlineEntity.toSaveable(): List<Any?> = when (this) {
     is MatrixInlineEntity.UserMention -> listOf(USER_MENTION, start, end, userId, contentText)
     is MatrixInlineEntity.RoomMention -> listOf(ROOM_MENTION, start, end)
-    is MatrixInlineEntity.CustomEmote -> listOf(CUSTOM_EMOTE, start, end, shortcode, mxcUrl, packId, body, width, height)
+    is MatrixInlineEntity.CustomEmote -> listOf(CUSTOM_EMOTE, start, end, shortcode, mxcUrl, pack?.toSaveable(), body, width, height)
 }
 
 private fun List<*>.toInlineEntity(): MatrixInlineEntity? {
@@ -226,7 +227,7 @@ private fun List<*>.toInlineEntity(): MatrixInlineEntity? {
             end,
             shortcode = this[3] as String,
             mxcUrl = this[4] as String,
-            packId = this[5] as String?,
+            pack = (this[5] as? List<*>)?.toImagePackSource(),
             body = this[6] as String?,
             width = getOrNull(7) as Int?,
             height = getOrNull(8) as Int?,
@@ -234,6 +235,14 @@ private fun List<*>.toInlineEntity(): MatrixInlineEntity? {
         else -> null
     }
 }
+
+private fun ImagePackSource.toSaveable(): List<Any?> = listOf(roomId, stateKey, usage)
+
+private fun List<*>.toImagePackSource() = ImagePackSource(
+    roomId = this[0] as String,
+    stateKey = this[1] as String,
+    usage = (this[2] as List<*>?)?.map { it as String },
+)
 
 private const val USER_MENTION = "user"
 private const val ROOM_MENTION = "room"
