@@ -213,7 +213,7 @@ class MatrixMarkdownTextFieldState(
 private fun MatrixInlineEntity.toSaveable(): List<Any?> = when (this) {
     is MatrixInlineEntity.UserMention -> listOf(USER_MENTION, start, end, userId, contentText)
     is MatrixInlineEntity.RoomMention -> listOf(ROOM_MENTION, start, end)
-    is MatrixInlineEntity.CustomEmote -> listOf(CUSTOM_EMOTE, start, end, shortcode, mxcUrl, pack?.toSaveable(), body, width, height)
+    is MatrixInlineEntity.CustomEmote -> listOf(CUSTOM_EMOTE, start, end, shortcode, mxcUrl, pack?.toSaveable(), body, width, height, info)
 }
 
 private fun List<*>.toInlineEntity(): MatrixInlineEntity? {
@@ -231,6 +231,7 @@ private fun List<*>.toInlineEntity(): MatrixInlineEntity? {
             body = this[6] as String?,
             width = getOrNull(7) as Int?,
             height = getOrNull(8) as Int?,
+            info = getOrNull(9) as String?,
         )
         else -> null
     }

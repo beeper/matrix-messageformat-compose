@@ -314,6 +314,7 @@ class MatrixMarkdownTextFieldStateTest {
                 body = "A cat",
                 width = 200,
                 height = 100,
+                info = "{\"mimetype\":\"image/png\",\"w\":200,\"h\":100}",
             ),
         )
         val state = MatrixMarkdownTextFieldState("@Alice @room :cat: hi", entities)
