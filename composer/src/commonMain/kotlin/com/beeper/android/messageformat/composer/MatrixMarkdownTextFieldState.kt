@@ -3,6 +3,7 @@ package com.beeper.android.messageformat.composer
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.then
 import androidx.compose.foundation.text.input.UndoState
 import androidx.compose.foundation.text.input.delete
 import androidx.compose.runtime.Composable
