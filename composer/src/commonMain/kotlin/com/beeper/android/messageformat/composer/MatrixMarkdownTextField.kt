@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.KeyboardActionHandler
 import androidx.compose.foundation.text.input.TextFieldDecorator
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -71,6 +72,7 @@ import kotlin.math.roundToInt
  * line a mark is on, given where the mark is on that line and the line's baseline. [onMarkClick] is told of
  * a tap on a mark, but not of a drag or long press, with the bounds of the mark on the tapped line. The tap
  * still places the cursor.
+ * [inputTransformation] transforms the user's input before the field keeps its entities in step with it.
  */
 @Composable
 fun MatrixMarkdownTextField(
@@ -85,6 +87,8 @@ fun MatrixMarkdownTextField(
     drawMark: (DrawScope.(mark: ComposerTextMark<*>, position: DrawPosition.InLine, baseline: Float) -> Unit)? = null,
     onMarkClick: ((mark: ComposerTextMark<*>, boundsInWindow: Rect) -> Unit)? = null,
     enabled: Boolean = true,
+    readOnly: Boolean = false,
+    inputTransformation: InputTransformation? = null,
     lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     onKeyboardAction: KeyboardActionHandler? = null,
@@ -171,7 +175,8 @@ fun MatrixMarkdownTextField(
             // The key up of a key held while focus is lost goes elsewhere
             .onFocusChanged { if (!it.hasFocus) state.navigatingByKey = false },
         enabled = enabled,
-        inputTransformation = state.inputTransformation,
+        readOnly = readOnly,
+        inputTransformation = remember(state, inputTransformation) { state.inputTransformationAfter(inputTransformation) },
         textStyle = textStyle,
         keyboardOptions = keyboardOptions,
         onKeyboardAction = onKeyboardAction,

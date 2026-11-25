@@ -1,5 +1,6 @@
 package com.beeper.android.messageformat.composer
 
+import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.ui.text.TextRange
@@ -232,6 +233,17 @@ class MatrixMarkdownTextFieldStateTest {
         state.insertEntity(TextRange(4, 7), "@Alice", textAfter = " ") { start, end -> alice(start, end) }
         state.assertState("hey @Alice ", alice(4, 10))
         assertEquals(TextRange(11), state.textFieldState.selection)
+    }
+
+    @Test
+    fun entitiesFollowWhatAnAppTransformationMakesOfTheInput() {
+        val state = state()
+        val prefixing = InputTransformation { replace(0, 0, ">> ") }
+        state.textFieldState.edit {
+            replace(length, length, "!")
+            with(state.inputTransformationAfter(prefixing)) { transformInput() }
+        }
+        state.assertState(">> hi @Alice there!", alice(6, 12))
     }
 
     @Test

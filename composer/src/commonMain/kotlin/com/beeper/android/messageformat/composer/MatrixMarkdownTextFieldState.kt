@@ -74,6 +74,10 @@ class MatrixMarkdownTextFieldState(
 
     internal val inputTransformation: InputTransformation = InputTransformation { update(stepped = navigatingByKey) }
 
+    /** [inputTransformation] after [first], so that entities follow what [first] made of the input. */
+    internal fun inputTransformationAfter(first: InputTransformation?): InputTransformation =
+        first?.then(inputTransformation) ?: inputTransformation
+
     /** Whether a navigation key is held, so that it and not a pointer moves the selection. */
     internal var navigatingByKey = false
 
