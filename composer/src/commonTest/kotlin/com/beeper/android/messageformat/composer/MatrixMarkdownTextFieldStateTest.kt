@@ -142,7 +142,7 @@ class MatrixMarkdownTextFieldStateTest {
     @Test
     fun undoingAnInsertedEntityDropsItAndRedoBringsItBack() {
         val state = MatrixMarkdownTextFieldState("hey @al")
-        state.insertEntity(TextRange(4, 7), "@Alice") { start, end -> alice(start, end) }
+        state.insertEntity(TextRange(4, 7), "@Alice", textAfter = " ") { start, end -> alice(start, end) }
         state.textFieldState.undoState.undo()
         state.assertState("hey @al")
         state.textFieldState.undoState.redo()
@@ -229,16 +229,24 @@ class MatrixMarkdownTextFieldStateTest {
     @Test
     fun insertEntityReplacesTheTriggerAndTracksTheEntity() {
         val state = MatrixMarkdownTextFieldState("hey @al")
-        state.insertEntity(TextRange(4, 7), "@Alice") { start, end -> alice(start, end) }
+        state.insertEntity(TextRange(4, 7), "@Alice", textAfter = " ") { start, end -> alice(start, end) }
         state.assertState("hey @Alice ", alice(4, 10))
         assertEquals(TextRange(11), state.textFieldState.selection)
+    }
+
+    @Test
+    fun insertEntityAddsNoTextOfItsOwn() {
+        val state = MatrixMarkdownTextFieldState("hey @al")
+        state.insertEntity(TextRange(4, 7), "@Alice") { start, end -> alice(start, end) }
+        state.assertState("hey @Alice", alice(4, 10))
+        assertEquals(TextRange(10), state.textFieldState.selection)
     }
 
     @Test
     fun insertEntityOverACutPillLandsWhereThePillWas() {
         val state = state()
         val emote = { start: Int, end: Int -> MatrixInlineEntity.CustomEmote(start, end, "cat", "mxc://x/cat") }
-        state.insertEntity(TextRange(5, 12), ":cat:", emote)
+        state.insertEntity(TextRange(5, 12), ":cat:", textAfter = " ", entity = emote)
         state.assertState("hi :cat: ere", emote(3, 8))
         assertEquals(TextRange(9), state.textFieldState.selection)
     }
@@ -246,7 +254,7 @@ class MatrixMarkdownTextFieldStateTest {
     @Test
     fun insertEntityInsideAPillGoesNextToIt() {
         val state = state()
-        state.insertEntity(TextRange(5), "@Bob") { start, end -> MatrixInlineEntity.UserMention(start, end, "@bob:x") }
+        state.insertEntity(TextRange(5), "@Bob", textAfter = " ") { start, end -> MatrixInlineEntity.UserMention(start, end, "@bob:x") }
         state.assertState("hi @Bob @Alice there", MatrixInlineEntity.UserMention(3, 7, "@bob:x"), alice(8, 14))
     }
 
@@ -289,7 +297,7 @@ class MatrixMarkdownTextFieldStateTest {
     @Test
     fun updatedEntitiesSurviveUndoAndRedo() {
         val state = state("hi ", *emptyArray())
-        state.insertEntity(TextRange(3), ":cat:") { start, end -> MatrixInlineEntity.CustomEmote(start, end, "cat", "mxc://x/cat") }
+        state.insertEntity(TextRange(3), ":cat:", textAfter = " ") { start, end -> MatrixInlineEntity.CustomEmote(start, end, "cat", "mxc://x/cat") }
         state.input { replace(length, length, "x") }
         state.updateEntities { if (it is MatrixInlineEntity.CustomEmote) it.copy(width = 200, height = 100) else it }
         val sized = MatrixInlineEntity.CustomEmote(3, 8, "cat", "mxc://x/cat", width = 200, height = 100)

@@ -104,12 +104,13 @@ class MatrixMarkdownTextFieldState(
     }
 
     /**
-     * Replaces [replaced] with [visibleText] plus a space, tracked as the entity [entity] builds
-     * for that range.
+     * Replaces [replaced] with [visibleText], tracked as the entity [entity] builds for that range, followed by
+     * [textAfter], in one edit. The cursor ends up after [textAfter].
      */
     fun insertEntity(
         replaced: TextRange,
         visibleText: String,
+        textAfter: String = "",
         entity: (start: Int, end: Int) -> MatrixInlineEntity,
     ) {
         textFieldState.edit {
@@ -119,7 +120,7 @@ class MatrixMarkdownTextFieldState(
             // Reconciling may delete what is left of a cut entity, moving the cursor to the insertion point
             val kept = reconcile(previous.entities)
             val start = selection.start
-            val inserted = "$visibleText "
+            val inserted = visibleText + textAfter
             replace(start, start, inserted)
             val shifted = kept.map {
                 if (it.start >= start) it.moved(it.start + inserted.length, it.end + inserted.length) else it
