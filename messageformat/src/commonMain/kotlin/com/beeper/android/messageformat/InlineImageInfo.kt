@@ -45,6 +45,21 @@ data class InlineImageInfo(
             return w.toFloat() / h
         }
 
+    /**
+     * A custom emote's shortcode: from its [title], as the Matrix spec sends it, unless its [alt] is wrapped in
+     * colons like a shortcode, as mautrix's markdown convention sends it. Null for other images.
+     */
+    val emoteShortcode: String?
+        get() {
+            if (!isEmote) return null
+            val shortcodeAlt = alt?.takeIf { it.length > 2 && it.startsWith(':') && it.endsWith(':') }
+            return (shortcodeAlt ?: title)?.removeSurrounding(":")?.takeIf { it.isNotBlank() }
+        }
+
+    /** What to show in place of a custom emote: its [emoteShortcode] as `:shortcode:`. */
+    val emoteFallbackText: String?
+        get() = emoteShortcode?.let { ":$it:" }
+
     fun placeholder(
         defaultHeight: TextUnit,
         minWidthSp: Int,

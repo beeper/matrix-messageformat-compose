@@ -66,7 +66,7 @@ object StrippedFormattingRenderer {
     }
 
     private fun defaultInlineImageReplacement(info: InlineImageInfo): String =
-        info.alt ?: info.title ?: if (info.isEmote) "[emote]" else "[IMG]"
+        info.emoteFallbackText ?: info.alt ?: info.title ?: if (info.isEmote) "[emote]" else "[IMG]"
 
     private fun defaultSpoilerReplacement(spoiler: AnnotatedString): String =
         "█".repeat(spoiler.length)
