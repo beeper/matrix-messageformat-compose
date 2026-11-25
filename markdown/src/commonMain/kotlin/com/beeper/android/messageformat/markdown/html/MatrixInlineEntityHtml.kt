@@ -38,7 +38,7 @@ internal fun customEmoteHtml(
     imageWidth: Int? = null,
     imageHeight: Int? = null,
 ): String {
-    val alt = body?.takeIf { it.isNotBlank() } ?: shortcode
+    val alt = emoteAlt(shortcode, body)
     val width = if (imageWidth != null && imageHeight != null && imageWidth > 0 && imageHeight > 0) {
         " width=\"${(CUSTOM_EMOTE_HEIGHT * imageWidth.toFloat() / imageHeight).roundToInt().coerceAtLeast(1)}\""
     } else {
@@ -46,5 +46,8 @@ internal fun customEmoteHtml(
     }
     return "<img src=\"$mxcUrl\" alt=\"$alt\" title=\"$shortcode\" data-mx-emoticon$width height=\"$CUSTOM_EMOTE_HEIGHT\">"
 }
+
+/** A custom emote's `alt`, which the Matrix spec sets to its [body], or [shortcode] when there is none. */
+internal fun emoteAlt(shortcode: CharSequence, body: CharSequence?): CharSequence = body?.takeIf { it.isNotBlank() } ?: shortcode
 
 private const val CUSTOM_EMOTE_HEIGHT = 32

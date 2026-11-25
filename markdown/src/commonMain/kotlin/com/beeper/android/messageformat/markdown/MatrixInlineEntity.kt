@@ -1,8 +1,12 @@
 package com.beeper.android.messageformat.markdown
 
+import com.beeper.android.messageformat.InlineImageInfo
 import com.beeper.android.messageformat.MENTION_ROOM
+import com.beeper.android.messageformat.MatrixBodyAnnotations
+import com.beeper.android.messageformat.MatrixBodyParseResult
 import com.beeper.android.messageformat.MatrixPatterns
 import com.beeper.android.messageformat.MatrixToLink
+import com.beeper.android.messageformat.markdown.html.emoteAlt
 
 /**
  * A span of composer text with special meaning.
@@ -53,6 +57,19 @@ sealed interface MatrixInlineEntity {
         val info: String? = null,
     ) : MatrixInlineEntity {
         override fun moved(start: Int, end: Int) = copy(start = start, end = end)
+
+        /** The inline image this emote's sent HTML describes, keyed as [inlineImageId]. */
+        fun toInlineImageInfo() = InlineImageInfo(
+            uri = mxcUrl,
+            isEmote = true,
+            width = width,
+            height = height,
+            title = shortcode,
+            alt = emoteAlt(shortcode, body).toString(),
+        )
+
+        /** The key of this emote's image, as [MatrixBodyParseResult.inlineImages] keys a message's images. */
+        val inlineImageId: String get() = MatrixBodyAnnotations.INLINE_IMAGE_PREFIX + mxcUrl
     }
 }
 
