@@ -30,7 +30,7 @@ class ComposerRendererTest {
     private val emoteStyle = SpanStyle(fontSize = 20.sp)
 
     private val formatter = object : NoStyleFormatter() {
-        override fun formatSyntaxMarker(context: FormatContext) = listOf(marker)
+        override fun formatSyntaxMarker(feature: MarkdownFeature, context: FormatContext) = listOf(marker)
         override fun formatUserMention(mention: MatrixToLink.UserMention, context: FormatContext) =
             listOf(this@ComposerRendererTest.mention)
         override fun formatSpan(attributes: SpanAttributes, context: FormatContext) =

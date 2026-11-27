@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
 import co.touchlab.kermit.Logger
+import com.beeper.android.messageformat.markdown.MarkdownFeature
 import kotlinx.serialization.json.Json
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.plus
@@ -46,8 +47,11 @@ abstract class MatrixBodyStyledFormatter {
     abstract fun tableIndention(depth: Int): TextUnit
     abstract fun formatDetailsSummary(revealId: Int, context: FormatContext): List<AnnotatedString.Annotation>?
     abstract fun formatDetailsContent(revealId: Int, context: FormatContext): List<AnnotatedString.Annotation>?
-    /** Styles the markup characters of a formatting syntax when the source is shown unrendered, e.g. markdown delimiters in a composer. */
-    open fun formatSyntaxMarker(context: FormatContext): List<AnnotatedString.Annotation>? = null
+    /**
+     * Styles the markup characters of a formatting syntax when the source is shown unrendered, e.g. markdown delimiters in a composer.
+     * [feature] is the syntax the characters belong to.
+     */
+    open fun formatSyntaxMarker(feature: MarkdownFeature, context: FormatContext): List<AnnotatedString.Annotation>? = null
     /** Styles the text standing in for an inline image where images cannot be shown, e.g. a custom emote shortcode in a composer. */
     open fun formatInlineImageText(image: InlineImageInfo, context: FormatContext): List<AnnotatedString.Annotation>? = null
 
@@ -170,7 +174,15 @@ abstract class MatrixBodyStyledFormatter {
                         formatDetailsContent(revealId, context)
                     }
                 }
-                MatrixBodyAnnotations.SYNTAX_MARKER -> formatSyntaxMarker(context)
+                MatrixBodyAnnotations.SYNTAX_MARKER -> {
+                    val feature = MarkdownFeature.entries.firstOrNull { it.name == annotation.value }
+                    if (feature == null) {
+                        log.e("Syntax marker parsing error, unknown feature: ${annotation.value}")
+                        null
+                    } else {
+                        formatSyntaxMarker(feature, context)
+                    }
+                }
                 MatrixBodyAnnotations.INLINE_IMAGE -> context.input.inlineImages[annotation.value]?.let { formatInlineImageText(it, context) }
 
                 else -> {

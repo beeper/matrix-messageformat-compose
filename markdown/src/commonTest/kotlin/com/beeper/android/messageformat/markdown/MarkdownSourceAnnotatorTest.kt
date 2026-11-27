@@ -173,4 +173,48 @@ class MarkdownSourceAnnotatorTest {
         assertEquals(emptyList(), result.annotated(MatrixBodyAnnotations.UNORDERED_LIST_ITEM))
         assertEquals(emptyList(), result.annotated(MatrixBodyAnnotations.ORDERED_LIST_ITEM))
     }
+
+    @Test
+    fun markersCarryTheirFeature() {
+        val result = annotate(
+            "# h\n\n**b** _i_ ~~s~~ ||x|| `c` [l](https://x.org) <https://y.org> ![a](mxc://x.org/i)\n\n---\n\n" +
+                "> q\n- u\n1. o\n| a |\n|---|\n| b |\n\n```\ncode\n```",
+        )
+        val markers = result.annotated(MatrixBodyAnnotations.SYNTAX_MARKER)
+            .map { (text, feature) -> text.trimEnd() to MarkdownFeature.valueOf(feature) }
+        assertEquals(MarkdownFeature.ALL, markers.map { it.second }.toSet())
+        assertEquals(
+            listOf(
+                "#" to MarkdownFeature.HEADING,
+                "**" to MarkdownFeature.BOLD,
+                "**" to MarkdownFeature.BOLD,
+                "_" to MarkdownFeature.ITALIC,
+                "_" to MarkdownFeature.ITALIC,
+                "~~" to MarkdownFeature.STRIKETHROUGH,
+                "~~" to MarkdownFeature.STRIKETHROUGH,
+                "||" to MarkdownFeature.SPOILER,
+                "||" to MarkdownFeature.SPOILER,
+                "`" to MarkdownFeature.INLINE_CODE,
+                "`" to MarkdownFeature.INLINE_CODE,
+                "[" to MarkdownFeature.INLINE_LINK,
+                "](https://x.org)" to MarkdownFeature.INLINE_LINK,
+                "<" to MarkdownFeature.AUTOLINK,
+                ">" to MarkdownFeature.AUTOLINK,
+                "![" to MarkdownFeature.IMAGE,
+                "](mxc://x.org/i)" to MarkdownFeature.IMAGE,
+                "---" to MarkdownFeature.HORIZONTAL_RULE,
+                ">" to MarkdownFeature.BLOCKQUOTE,
+                "-" to MarkdownFeature.UNORDERED_LIST,
+                "1." to MarkdownFeature.ORDERED_LIST,
+                "|" to MarkdownFeature.TABLE,
+                "|" to MarkdownFeature.TABLE,
+                "|---|" to MarkdownFeature.TABLE,
+                "|" to MarkdownFeature.TABLE,
+                "|" to MarkdownFeature.TABLE,
+                "```" to MarkdownFeature.CODE_BLOCK,
+                "```" to MarkdownFeature.CODE_BLOCK,
+            ),
+            markers,
+        )
+    }
 }
