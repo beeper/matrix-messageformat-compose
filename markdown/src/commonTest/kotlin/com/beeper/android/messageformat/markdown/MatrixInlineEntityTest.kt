@@ -2,6 +2,8 @@ package com.beeper.android.messageformat.markdown
 
 import androidx.compose.ui.text.font.FontWeight
 import com.beeper.android.messageformat.MatrixBodyAnnotations
+import com.beeper.android.messageformat.MatrixBodyPreFormatStyle
+import com.beeper.android.messageformat.MatrixHtmlParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -126,6 +128,16 @@ class MatrixInlineEntityTest {
             "<img src=\"mxc://x/cat\" alt=\"cat\" title=\"cat\" data-mx-emoticon width=\"64\" height=\"32\">",
             parser.toHtml(":cat:", listOf(emote)),
         )
+    }
+
+    @Test
+    fun emoteImageIsTheImageItsSentHtmlParsesTo() {
+        val emote = MatrixInlineEntity.CustomEmote(0, 5, "cat", "mxc://x/cat", body = "a cat")
+        val parsed = MatrixHtmlParser()
+            .parseHtml(parser.toHtml(":cat:", listOf(emote)), MatrixBodyPreFormatStyle(), allowRoomMention = true)
+            .inlineImages[emote.inlineImageId]!!
+        assertEquals(parsed.copy(width = null, height = null), emote.toInlineImageInfo())
+        assertEquals(":cat:", emote.toInlineImageInfo().emoteFallbackText)
     }
 
     @Test

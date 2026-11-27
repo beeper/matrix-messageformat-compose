@@ -3,6 +3,7 @@ package com.beeper.android.messageformat.composer
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.then
 import androidx.compose.foundation.text.input.UndoState
 import androidx.compose.foundation.text.input.delete
 import androidx.compose.runtime.Composable
@@ -15,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
 import com.beeper.android.messageformat.composer.EntityReconciler.reconcile
 import com.beeper.android.messageformat.composer.MarkReconciler.reconcileMarks
+import com.beeper.android.messageformat.markdown.ImagePackSource
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
 import com.beeper.android.messageformat.markdown.MatrixMarkdownContent
 
@@ -73,6 +75,10 @@ class MatrixMarkdownTextFieldState(
 
     internal val inputTransformation: InputTransformation = InputTransformation { update(stepped = navigatingByKey) }
 
+    /** [inputTransformation] after [first], so that entities follow what [first] made of the input. */
+    internal fun inputTransformationAfter(first: InputTransformation?): InputTransformation =
+        first?.then(inputTransformation) ?: inputTransformation
+
     /** Whether a navigation key is held, so that it and not a pointer moves the selection. */
     internal var navigatingByKey = false
 
@@ -103,12 +109,13 @@ class MatrixMarkdownTextFieldState(
     }
 
     /**
-     * Replaces [replaced] with [visibleText] plus a space, tracked as the entity [entity] builds
-     * for that range.
+     * Replaces [replaced] with [visibleText], tracked as the entity [entity] builds for that range, followed by
+     * [textAfter], in one edit. The cursor ends up after [textAfter].
      */
     fun insertEntity(
         replaced: TextRange,
         visibleText: String,
+        textAfter: String = "",
         entity: (start: Int, end: Int) -> MatrixInlineEntity,
     ) {
         textFieldState.edit {
@@ -118,7 +125,7 @@ class MatrixMarkdownTextFieldState(
             // Reconciling may delete what is left of a cut entity, moving the cursor to the insertion point
             val kept = reconcile(previous.entities)
             val start = selection.start
-            val inserted = "$visibleText "
+            val inserted = visibleText + textAfter
             replace(start, start, inserted)
             val shifted = kept.map {
                 if (it.start >= start) it.moved(it.start + inserted.length, it.end + inserted.length) else it
@@ -212,7 +219,7 @@ class MatrixMarkdownTextFieldState(
 private fun MatrixInlineEntity.toSaveable(): List<Any?> = when (this) {
     is MatrixInlineEntity.UserMention -> listOf(USER_MENTION, start, end, userId, contentText)
     is MatrixInlineEntity.RoomMention -> listOf(ROOM_MENTION, start, end)
-    is MatrixInlineEntity.CustomEmote -> listOf(CUSTOM_EMOTE, start, end, shortcode, mxcUrl, packId, body, width, height)
+    is MatrixInlineEntity.CustomEmote -> listOf(CUSTOM_EMOTE, start, end, shortcode, mxcUrl, pack?.toSaveable(), body, width, height, info)
 }
 
 private fun List<*>.toInlineEntity(): MatrixInlineEntity? {
@@ -226,14 +233,23 @@ private fun List<*>.toInlineEntity(): MatrixInlineEntity? {
             end,
             shortcode = this[3] as String,
             mxcUrl = this[4] as String,
-            packId = this[5] as String?,
+            pack = (this[5] as? List<*>)?.toImagePackSource(),
             body = this[6] as String?,
             width = getOrNull(7) as Int?,
             height = getOrNull(8) as Int?,
+            info = getOrNull(9) as String?,
         )
         else -> null
     }
 }
+
+private fun ImagePackSource.toSaveable(): List<Any?> = listOf(roomId, stateKey, usage)
+
+private fun List<*>.toImagePackSource() = ImagePackSource(
+    roomId = this[0] as String,
+    stateKey = this[1] as String,
+    usage = (this[2] as List<*>?)?.map { it as String },
+)
 
 private const val USER_MENTION = "user"
 private const val ROOM_MENTION = "room"

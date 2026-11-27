@@ -361,12 +361,12 @@ fun TextRenderScreen() {
                 if (markdownInput) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(onClick = {
-                            composerState.insertEntity(composerState.selection, "@Alice") { start, end ->
+                            composerState.insertEntity(composerState.selection, "@Alice", textAfter = " ") { start, end ->
                                 MatrixInlineEntity.UserMention(start, end, "@alice:example.org")
                             }
                         }) { Text("Insert mention") }
                         TextButton(onClick = {
-                            composerState.insertEntity(composerState.selection, ":example_emote:") { start, end ->
+                            composerState.insertEntity(composerState.selection, ":example_emote:", textAfter = " ") { start, end ->
                                 MatrixInlineEntity.CustomEmote(start, end, "example_emote", "mxc://local.beeper.com/spiritcroc_TnTnE9q1fOXD0gtA9UlcBrStvCVLWwAbAtKcAIOKqWJRtQeZwsniGSRVA8xV51tB")
                             }
                         }) { Text("Insert custom emote") }
@@ -374,7 +374,11 @@ fun TextRenderScreen() {
                     MatrixMarkdownTextField(
                         state = composerState,
                         features = markdownFeatures,
-                        emote = { Image(Icons.Default.Image, it.body ?: it.shortcode) },
+                        inlineContent = { images ->
+                            images.toInlineContent(density, MaterialTheme.typography.bodyLarge.fontSize) { info, modifier ->
+                                Image(Icons.Default.Image, info.alt ?: info.title, modifier)
+                            }
+                        },
                         textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                         modifier = Modifier.fillMaxSize().weight(1f)
                             .border(1.dp, MaterialTheme.colorScheme.outline)

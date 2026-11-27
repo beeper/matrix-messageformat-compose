@@ -126,7 +126,7 @@ class ComposerTextMarkTest {
     @Test
     fun insertingAnEntityShiftsLaterMarks() {
         val state = state()
-        state.insertEntity(TextRange(0, 1), "@Alice") { start, end ->
+        state.insertEntity(TextRange(0, 1), "@Alice", textAfter = " ") { start, end ->
             MatrixInlineEntity.UserMention(start, end, "@alice:example.org")
         }
         state.assertMarks("@Alice  saw teh cat", mark.copy(start = 12, end = 15))
