@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.Density
 import com.beeper.android.messageformat.DefaultMatrixBodyStyledFormatter
 import com.beeper.android.messageformat.InlineImageInfo
 import com.beeper.android.messageformat.SpanAttributes
+import com.beeper.android.messageformat.markdown.MarkdownFeature
 
 open class DefaultMatrixComposerStyledFormatter(
     density: Density,
@@ -28,7 +29,10 @@ open class DefaultMatrixComposerStyledFormatter(
 ) {
     private val textColor: Color get() = textStyle.color.takeOrElse { Color.Black }
 
-    override fun formatSyntaxMarker(context: FormatContext): List<AnnotatedString.Annotation>? =
+    override fun formatSyntaxMarker(
+        feature: MarkdownFeature,
+        context: FormatContext,
+    ): List<AnnotatedString.Annotation>? =
         listOf(SpanStyle(color = textColor.copy(alpha = 0.5f)))
 
     override fun formatSpan(attributes: SpanAttributes, context: FormatContext): List<AnnotatedString.Annotation> {

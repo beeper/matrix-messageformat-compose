@@ -81,8 +81,9 @@ internal class MarkdownSourceAnnotator(
                 MarkdownElementTypes.INLINE_LINK -> inlineLink(node)
                 MarkdownElementTypes.AUTOLINK -> autolink(node)
                 MarkdownElementTypes.IMAGE -> image(node)
-                MarkdownTokenTypes.BLOCK_QUOTE -> if (MarkdownFeature.BLOCKQUOTE in features) marker(node)
-                in MARKER_TOKENS -> marker(node)
+                MarkdownTokenTypes.BLOCK_QUOTE ->
+                    if (MarkdownFeature.BLOCKQUOTE in features) marker(node, MarkdownFeature.BLOCKQUOTE)
+                in MARKER_TOKENS -> marker(node, MARKER_TOKENS.getValue(node.type))
                 else -> visitChildren(node.children)
             }
         }
@@ -100,8 +101,8 @@ internal class MarkdownSourceAnnotator(
             if (!node.hasMarkers(markerTokens, marker)) return visitChildren(node.children)
             val content = node.children.subList(markerTokens, node.children.size - markerTokens)
             if (feature in features) {
-                markerRange(node.startOffset, content.first().startOffset)
-                markerRange(content.last().endOffset, node.endOffset)
+                markerRange(node.startOffset, content.first().startOffset, feature)
+                markerRange(content.last().endOffset, node.endOffset, feature)
                 builder.addStyle(style, content.first().startOffset, content.last().endOffset)
             }
             visitChildren(content)
@@ -111,9 +112,10 @@ internal class MarkdownSourceAnnotator(
             val inner = node.children.subList(2, node.children.size - 2)
             val separator = inner.indexOfFirst { it.type == MatrixMarkdownTokenTypes.PIPE }
             val content = if (separator < 0) inner else inner.subList(separator + 1, inner.size)
-            markerRange(node.startOffset, inner.firstOrNull()?.startOffset ?: node.endOffset)
-            markerRange(inner.lastOrNull()?.endOffset ?: node.startOffset, node.endOffset)
-            if (separator >= 0) markerRange(inner.first().startOffset, inner[separator].endOffset)
+            val feature = MarkdownFeature.SPOILER
+            markerRange(node.startOffset, inner.firstOrNull()?.startOffset ?: node.endOffset, feature)
+            markerRange(inner.lastOrNull()?.endOffset ?: node.startOffset, node.endOffset, feature)
+            if (separator >= 0) markerRange(inner.first().startOffset, inner[separator].endOffset, feature)
             if (content.isNotEmpty()) {
                 val start = content.first().startOffset
                 val attributes = SpanAttributes(fgColor = null, bgColor = null, isSpoiler = true, revealId = start)
@@ -124,8 +126,8 @@ internal class MarkdownSourceAnnotator(
         }
 
         private fun codeSpan(node: ASTNode) {
-            marker(node.children.first())
-            marker(node.children.last())
+            marker(node.children.first(), MarkdownFeature.INLINE_CODE)
+            marker(node.children.last(), MarkdownFeature.INLINE_CODE)
             val content = node.children.subList(1, node.children.size - 1)
             if (content.isNotEmpty()) {
                 annotate(MatrixBodyAnnotations.INLINE_CODE, "", content.first().startOffset, content.last().endOffset)
@@ -133,7 +135,7 @@ internal class MarkdownSourceAnnotator(
         }
 
         private fun codeFence(node: ASTNode) {
-            node.children.filter { it.type in FENCE_MARKER_TOKENS }.forEach { marker(it) }
+            node.children.filter { it.type in FENCE_MARKER_TOKENS }.forEach { marker(it, MarkdownFeature.CODE_BLOCK) }
             val content = node.children.filter { it.type == MarkdownTokenTypes.CODE_FENCE_CONTENT }
             if (content.isNotEmpty()) {
                 annotate(MatrixBodyAnnotations.BLOCK_CODE, "", content.first().startOffset, content.last().endOffset)
@@ -142,7 +144,7 @@ internal class MarkdownSourceAnnotator(
 
         // The heading style spans the markers too, so the whole line reads as one heading
         private fun heading(node: ASTNode, level: Int) {
-            node.children.filter { it.type == MarkdownTokenTypes.ATX_HEADER }.forEach { marker(it) }
+            node.children.filter { it.type == MarkdownTokenTypes.ATX_HEADER }.forEach { marker(it, MarkdownFeature.HEADING) }
             val text = node.getTextInNode(source)
             val end = node.startOffset + text.indexOfLast { !it.isWhitespace() } + 1
             annotate(MatrixBodyAnnotations.HEADING, "h$level", node.startOffset, end)
@@ -155,8 +157,8 @@ internal class MarkdownSourceAnnotator(
             val destination = node.children.firstOrNull { it.type == MarkdownElementTypes.LINK_DESTINATION }
                 ?.let { LinkMap.normalizeDestination(it.getTextInNode(source), true).toString() }
                 ?: return visitChildren(node.children)
-            markerRange(node.startOffset, label.startOffset + 1)
-            markerRange(label.endOffset - 1, node.endOffset)
+            markerRange(node.startOffset, label.startOffset + 1, MarkdownFeature.INLINE_LINK)
+            markerRange(label.endOffset - 1, node.endOffset, MarkdownFeature.INLINE_LINK)
             val content = label.children.subList(1, label.children.size - 1)
             if (content.isNotEmpty()) {
                 annotate(
@@ -172,8 +174,8 @@ internal class MarkdownSourceAnnotator(
         private fun autolink(node: ASTNode) {
             val url = node.getTextInNode(source)
             if (url.length < 3) return
-            markerRange(node.startOffset, node.startOffset + 1)
-            markerRange(node.endOffset - 1, node.endOffset)
+            markerRange(node.startOffset, node.startOffset + 1, MarkdownFeature.AUTOLINK)
+            markerRange(node.endOffset - 1, node.endOffset, MarkdownFeature.AUTOLINK)
             val address = url.subSequence(1, url.length - 1).toString()
             if (node.children.any { it.type == MarkdownTokenTypes.EMAIL_AUTOLINK }) {
                 annotate(MatrixBodyAnnotations.MAIL_ADDRESS, address, node.startOffset + 1, node.endOffset - 1)
@@ -186,16 +188,16 @@ internal class MarkdownSourceAnnotator(
         private fun image(node: ASTNode) {
             val label = node.children.firstOrNull { it.type == MarkdownElementTypes.INLINE_LINK }
                 ?.children?.firstOrNull { it.type == MarkdownElementTypes.LINK_TEXT }
-                ?: return markerRange(node.startOffset, node.endOffset)
-            markerRange(node.startOffset, label.startOffset + 1)
-            markerRange(label.endOffset - 1, node.endOffset)
+                ?: return markerRange(node.startOffset, node.endOffset, MarkdownFeature.IMAGE)
+            markerRange(node.startOffset, label.startOffset + 1, MarkdownFeature.IMAGE)
+            markerRange(label.endOffset - 1, node.endOffset, MarkdownFeature.IMAGE)
         }
 
-        private fun marker(node: ASTNode) = markerRange(node.startOffset, node.endOffset)
+        private fun marker(node: ASTNode, feature: MarkdownFeature) = markerRange(node.startOffset, node.endOffset, feature)
 
-        private fun markerRange(start: Int, end: Int) {
+        private fun markerRange(start: Int, end: Int, feature: MarkdownFeature) {
             if (start < end) autoLinkExcluded += TextRange(start, end)
-            annotate(MatrixBodyAnnotations.SYNTAX_MARKER, "", start, end)
+            annotate(MatrixBodyAnnotations.SYNTAX_MARKER, feature.name, start, end)
         }
 
         private fun annotate(tag: String, value: String, start: Int, end: Int) {
@@ -208,11 +210,11 @@ internal class MarkdownSourceAnnotator(
         val ITALIC = SpanStyle(fontStyle = FontStyle.Italic)
         val STRIKETHROUGH = SpanStyle(textDecoration = TextDecoration.LineThrough)
 
-        val MARKER_TOKENS: Set<IElementType> = setOf(
-            MarkdownTokenTypes.LIST_BULLET,
-            MarkdownTokenTypes.LIST_NUMBER,
-            MarkdownTokenTypes.HORIZONTAL_RULE,
-            GFMTokenTypes.TABLE_SEPARATOR,
+        val MARKER_TOKENS: Map<IElementType, MarkdownFeature> = mapOf(
+            MarkdownTokenTypes.LIST_BULLET to MarkdownFeature.UNORDERED_LIST,
+            MarkdownTokenTypes.LIST_NUMBER to MarkdownFeature.ORDERED_LIST,
+            MarkdownTokenTypes.HORIZONTAL_RULE to MarkdownFeature.HORIZONTAL_RULE,
+            GFMTokenTypes.TABLE_SEPARATOR to MarkdownFeature.TABLE,
         )
 
         val AUTO_LINK_EXCLUDED: Set<IElementType> = setOf(
