@@ -30,6 +30,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.stdlib)
                 implementation(libs.jetbrains.markdown)
+                implementation(libs.jsoup)
                 api(project(":messageformat"))
                 implementation(compose.ui)
                 implementation(libs.kotlinx.serialization.json)

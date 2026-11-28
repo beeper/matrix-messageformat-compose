@@ -6,6 +6,7 @@ import com.beeper.android.messageformat.MatrixBodyAnnotations
 import com.beeper.android.messageformat.MatrixBodyParseResult
 import com.beeper.android.messageformat.MatrixBodyPreFormatStyle
 import com.beeper.android.messageformat.MatrixToLink
+import com.beeper.android.messageformat.markdown.html.HtmlToMarkdown
 import com.beeper.android.messageformat.markdown.html.MatrixHtmlProviders
 import com.beeper.android.messageformat.markdown.html.MatrixInlineEntityTagRenderer
 import com.beeper.android.messageformat.markdown.html.escapeHtml
@@ -52,6 +53,13 @@ class MatrixMarkdownParser(
             .unwrapSingleParagraph()
     }
 
+    /**
+     * The composer content that [toHtml] turns back into [html], as far as [html] uses the markdown of the
+     * parser's features. Other formatting is dropped, keeping its text.
+     */
+    fun fromHtml(html: String): MatrixMarkdownContent =
+        HtmlToMarkdown(flavour.features, flavour.stripEscapeBackslashes).convert(html)
+
     fun toDraft(markdown: String, entities: List<MatrixInlineEntity> = emptyList()): MatrixFormattedMessageDraft =
         toDraft(MatrixMarkdownContent(markdown, entities))
 
@@ -89,16 +97,9 @@ class MatrixMarkdownParser(
                     }
                     is MatrixInlineEntity.RoomMention ->
                         addStringAnnotation(MatrixBodyAnnotations.ROOM_MENTION, "", entity.start, entity.end)
-                    is MatrixInlineEntity.CustomEmote -> {
+                    is MatrixInlineEntity.InlineImage -> {
                         val id = "${MatrixBodyAnnotations.INLINE_IMAGE_PREFIX}$index"
-                        inlineImages[id] = InlineImageInfo(
-                            uri = entity.mxcUrl,
-                            isEmote = true,
-                            width = null,
-                            height = null,
-                            title = entity.shortcode,
-                            alt = markdown.substring(entity.start, entity.end),
-                        )
+                        inlineImages[id] = entity.image
                         addStringAnnotation(MatrixBodyAnnotations.INLINE_IMAGE, id, entity.start, entity.end)
                     }
                 }

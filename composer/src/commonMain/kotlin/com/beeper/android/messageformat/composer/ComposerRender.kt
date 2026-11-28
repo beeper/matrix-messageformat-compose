@@ -26,8 +26,8 @@ import com.beeper.android.messageformat.markdown.MatrixMarkdownParser
  */
 internal const val EMOTE_PLACEHOLDER = ' '
 
-/** A custom emote the field shows as an image, over one [EMOTE_PLACEHOLDER] in [style]. */
-internal data class ComposerEmote(val entity: MatrixInlineEntity.CustomEmote, val style: SpanStyle) {
+/** An inline image the field shows over one [EMOTE_PLACEHOLDER] in [style]. */
+internal data class ComposerEmote(val entity: MatrixInlineEntity.InlineImage, val style: SpanStyle) {
     val range: TextRange get() = TextRange(entity.start, entity.end)
 }
 
@@ -55,21 +55,21 @@ internal class ComposerRender(
 
 /**
  * Renders composer content: its markdown formatting as span styles from [formatter], and as images those
- * custom emotes that [emoteStyle] has a placeholder style for.
+ * inline images that [emoteStyle] has a placeholder style for.
  * The last render is kept, because the output transformation, the background drawing and the emote layout
  * each ask for the render of the same content.
  */
 internal class ComposerRenderer(
     private val parser: MatrixMarkdownParser,
     private val formatter: MatrixBodyStyledFormatter,
-    private val emoteStyle: (MatrixInlineEntity.CustomEmote) -> SpanStyle?,
+    private val emoteStyle: (MatrixInlineEntity.InlineImage) -> SpanStyle?,
 ) {
     private val log = Logger.withTag("ComposerRenderer")
     private var last: ComposerRender? = null
 
     fun render(content: MatrixMarkdownContent): ComposerRender {
         val emotes = content.entities.mapNotNull { entity ->
-            (entity as? MatrixInlineEntity.CustomEmote)?.let { emote ->
+            (entity as? MatrixInlineEntity.InlineImage)?.let { emote ->
                 emoteStyle(emote)?.let { ComposerEmote(emote, it) }
             }
         }

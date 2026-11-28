@@ -367,7 +367,7 @@ fun TextRenderScreen() {
                         }) { Text("Insert mention") }
                         TextButton(onClick = {
                             composerState.insertEntity(composerState.selection, ":example_emote:", textAfter = " ") { start, end ->
-                                MatrixInlineEntity.CustomEmote(start, end, "example_emote", "mxc://local.beeper.com/spiritcroc_TnTnE9q1fOXD0gtA9UlcBrStvCVLWwAbAtKcAIOKqWJRtQeZwsniGSRVA8xV51tB")
+                                MatrixInlineEntity.InlineImage.customEmote(start, end, "example_emote", "mxc://local.beeper.com/spiritcroc_TnTnE9q1fOXD0gtA9UlcBrStvCVLWwAbAtKcAIOKqWJRtQeZwsniGSRVA8xV51tB")
                             }
                         }) { Text("Insert custom emote") }
                     }

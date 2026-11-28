@@ -2,11 +2,8 @@ package com.beeper.android.messageformat.markdown
 
 import com.beeper.android.messageformat.InlineImageInfo
 import com.beeper.android.messageformat.MENTION_ROOM
-import com.beeper.android.messageformat.MatrixBodyAnnotations
-import com.beeper.android.messageformat.MatrixBodyParseResult
 import com.beeper.android.messageformat.MatrixPatterns
 import com.beeper.android.messageformat.MatrixToLink
-import com.beeper.android.messageformat.markdown.html.emoteAlt
 
 /**
  * A span of composer text with special meaning.
@@ -42,34 +39,40 @@ sealed interface MatrixInlineEntity {
         override fun sentText(visibleText: String): String = MENTION_ROOM
     }
 
-    data class CustomEmote(
+    /**
+     * An inline image, such as a custom emote. Its [image] is what the sent HTML describes. [pack] and [packInfo]
+     * are set for emotes picked from an image pack.
+     */
+    data class InlineImage(
         override val start: Int,
         override val end: Int,
-        val shortcode: String,
-        val mxcUrl: String,
+        val image: InlineImageInfo,
         val pack: ImagePackSource? = null,
-        /** The emote's description from its image pack, sent as the image's alt text. */
-        val body: String? = null,
-        /** The emote image's size from its image pack, used to send its aspect ratio. */
-        val width: Int? = null,
-        val height: Int? = null,
         /** The image's raw `info` JSON object from its image pack. */
-        val info: String? = null,
+        val packInfo: String? = null,
     ) : MatrixInlineEntity {
         override fun moved(start: Int, end: Int) = copy(start = start, end = end)
 
-        /** The inline image this emote's sent HTML describes, keyed as [inlineImageId]. */
-        fun toInlineImageInfo() = InlineImageInfo(
-            uri = mxcUrl,
-            isEmote = true,
-            width = width,
-            height = height,
-            title = shortcode,
-            alt = emoteAlt(shortcode, body).toString(),
-        )
-
-        /** The key of this emote's image, as [MatrixBodyParseResult.inlineImages] keys a message's images. */
-        val inlineImageId: String get() = MatrixBodyAnnotations.INLINE_IMAGE_PREFIX + mxcUrl
+        companion object {
+            /** A custom emote, with the [body] and image size from its image pack. */
+            fun customEmote(
+                start: Int,
+                end: Int,
+                shortcode: String,
+                mxcUrl: String,
+                pack: ImagePackSource? = null,
+                body: String? = null,
+                width: Int? = null,
+                height: Int? = null,
+                packInfo: String? = null,
+            ) = InlineImage(
+                start,
+                end,
+                InlineImageInfo(uri = mxcUrl, isEmote = true, width = width, height = height, title = shortcode, alt = body),
+                pack,
+                packInfo,
+            )
+        }
     }
 }
 

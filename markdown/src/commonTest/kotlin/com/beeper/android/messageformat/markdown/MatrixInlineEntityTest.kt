@@ -19,7 +19,7 @@ class MatrixInlineEntityTest {
         val text = "hi @Alice and :catjam: and @room"
         val entities = listOf(
             MatrixInlineEntity.UserMention(3, 9, "@alice:example.org"),
-            MatrixInlineEntity.CustomEmote(14, 22, "catjam", "mxc://x/cat"),
+            MatrixInlineEntity.InlineImage.customEmote(14, 22, "catjam", "mxc://x/cat"),
             MatrixInlineEntity.RoomMention(27, 32),
         )
         assertEquals(
@@ -114,7 +114,7 @@ class MatrixInlineEntityTest {
 
     @Test
     fun emoteBodyBecomesAltText() {
-        val emote = MatrixInlineEntity.CustomEmote(0, 5, "cat", "mxc://x/cat", body = "a cat")
+        val emote = MatrixInlineEntity.InlineImage.customEmote(0, 5, "cat", "mxc://x/cat", body = "a cat")
         assertEquals(
             "<img src=\"mxc://x/cat\" alt=\"a cat\" title=\"cat\" data-mx-emoticon height=\"32\">",
             parser.toHtml(":cat:", listOf(emote)),
@@ -123,7 +123,7 @@ class MatrixInlineEntityTest {
 
     @Test
     fun emoteImageSizeBecomesWidthAtSentHeight() {
-        val emote = MatrixInlineEntity.CustomEmote(0, 5, "cat", "mxc://x/cat", width = 200, height = 100)
+        val emote = MatrixInlineEntity.InlineImage.customEmote(0, 5, "cat", "mxc://x/cat", width = 200, height = 100)
         assertEquals(
             "<img src=\"mxc://x/cat\" alt=\"cat\" title=\"cat\" data-mx-emoticon width=\"64\" height=\"32\">",
             parser.toHtml(":cat:", listOf(emote)),
@@ -132,12 +132,12 @@ class MatrixInlineEntityTest {
 
     @Test
     fun emoteImageIsTheImageItsSentHtmlParsesTo() {
-        val emote = MatrixInlineEntity.CustomEmote(0, 5, "cat", "mxc://x/cat", body = "a cat")
+        val emote = MatrixInlineEntity.InlineImage.customEmote(0, 5, "cat", "mxc://x/cat", body = "a cat")
         val parsed = MatrixHtmlParser()
             .parseHtml(parser.toHtml(":cat:", listOf(emote)), MatrixBodyPreFormatStyle(), allowRoomMention = true)
-            .inlineImages[emote.inlineImageId]!!
-        assertEquals(parsed.copy(width = null, height = null), emote.toInlineImageInfo())
-        assertEquals(":cat:", emote.toInlineImageInfo().emoteFallbackText)
+            .inlineImages[emote.image.id]!!
+        assertEquals(parsed.copy(width = null, height = null), emote.image)
+        assertEquals(":cat:", emote.image.emoteFallbackText)
     }
 
     @Test
@@ -161,14 +161,11 @@ class MatrixInlineEntityTest {
     @Test
     fun sourceAnnotationDescribesCustomEmotesAsInlineImages() {
         val text = "hi :cat:"
-        val result = parser.annotateSource(text, listOf(MatrixInlineEntity.CustomEmote(3, 8, "cat", "mxc://x/cat")))
+        val emote = MatrixInlineEntity.InlineImage.customEmote(3, 8, "cat", "mxc://x/cat")
+        val result = parser.annotateSource(text, listOf(emote))
         val annotation = result.text.getStringAnnotations(MatrixBodyAnnotations.INLINE_IMAGE, 0, text.length).single()
         assertEquals(3 to 8, annotation.start to annotation.end)
-        val image = result.inlineImages.getValue(annotation.item)
-        assertEquals("mxc://x/cat", image.uri)
-        assertEquals("cat", image.title)
-        assertEquals(":cat:", image.alt)
-        assertTrue(image.isEmote)
+        assertEquals(emote.image, result.inlineImages.getValue(annotation.item))
     }
 
     @Test

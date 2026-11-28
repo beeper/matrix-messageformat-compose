@@ -42,7 +42,7 @@ class ComposerRendererTest {
     private var shownEmoteStyle: SpanStyle? = emoteStyle
     private val renderer = ComposerRenderer(MatrixMarkdownParser(MarkdownFeature.ALL), formatter) { shownEmoteStyle }
 
-    private fun emote(start: Int, end: Int) = MatrixInlineEntity.CustomEmote(start, end, "cat", "mxc://x/cat")
+    private fun emote(start: Int, end: Int) = MatrixInlineEntity.InlineImage.customEmote(start, end, "cat", "mxc://x/cat")
 
     private fun render(text: String, vararg entities: MatrixInlineEntity) =
         renderer.render(MatrixMarkdownContent(text, entities.toList()))

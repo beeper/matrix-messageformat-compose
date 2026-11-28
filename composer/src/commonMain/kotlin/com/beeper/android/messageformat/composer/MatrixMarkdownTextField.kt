@@ -65,9 +65,9 @@ import kotlin.math.roundToInt
 
 /**
  * A text field that formats markdown in place, as [features] allow.
- * Custom emotes show as the [inlineContent] for their images draws them, sized by its placeholders, like the
- * inline images of a message: it gets each emote's [MatrixInlineEntity.CustomEmote.toInlineImageInfo], keyed by
- * [MatrixInlineEntity.CustomEmote.inlineImageId]. Without [inlineContent], emotes show as their text.
+ * Inline images, such as custom emotes, are drawn by [inlineContent] and sized by its placeholders, like the inline
+ * images of a message. It gets the [MatrixInlineEntity.InlineImage.image] of each, keyed by [InlineImageInfo.id].
+ * Without [inlineContent], inline images show as their text.
  * [drawMark] draws the marks of [state], which do not show without it. It draws behind the text, once per
  * line a mark is on, given where the mark is on that line and the line's baseline. [onMarkClick] is told of
  * a tap on a mark, but not of a drag or long press, with the bounds of the mark on the tapped line. The tap
@@ -103,14 +103,14 @@ fun MatrixMarkdownTextField(
     val textMeasurer = rememberTextMeasurer()
     val entities = state.entities
     val emoteImages = remember(entities) {
-        entities.filterIsInstance<MatrixInlineEntity.CustomEmote>().associate { it.inlineImageId to it.toInlineImageInfo() }
+        entities.filterIsInstance<MatrixInlineEntity.InlineImage>().associate { it.image.id to it.image }
     }
     val emoteContent = inlineContent?.invoke(emoteImages)
     val currentEmoteContent by rememberUpdatedState(emoteContent)
     val renderer = remember(parser, formatter, textStyle, textMeasurer, density) {
         ComposerRenderer(parser, formatter) { entity ->
             currentEmoteContent?.let { content ->
-                val placeholder = content[entity.inlineImageId]?.placeholder
+                val placeholder = content[entity.image.id]?.placeholder
                 val size = placeholder?.let { MatrixComposerEmoteSize(it.width, it.height) } ?: MatrixComposerEmoteSize.Default
                 emotePlaceholderStyle(size, textStyle, textMeasurer, density)
             }
@@ -195,8 +195,8 @@ fun MatrixMarkdownTextField(
                         Emotes(
                             render = render,
                             emote = { emote ->
-                                val alternateText = emote.toInlineImageInfo().emoteFallbackText ?: emote.shortcode
-                                emoteContent[emote.inlineImageId]?.children?.invoke(alternateText)
+                                val alternateText = emote.image.emoteFallbackText ?: emote.image.alt.orEmpty()
+                                emoteContent[emote.image.id]?.children?.invoke(alternateText)
                             },
                             layout = { layoutProvider?.invoke() },
                             scrollOffset = ::scrollOffset,
@@ -239,7 +239,7 @@ internal data class MatrixComposerEmoteSize(val width: TextUnit, val height: Tex
 @Composable
 private fun Emotes(
     render: ComposerRender,
-    emote: @Composable (MatrixInlineEntity.CustomEmote) -> Unit,
+    emote: @Composable (MatrixInlineEntity.InlineImage) -> Unit,
     layout: () -> TextLayoutResult?,
     scrollOffset: () -> IntOffset,
 ) {
