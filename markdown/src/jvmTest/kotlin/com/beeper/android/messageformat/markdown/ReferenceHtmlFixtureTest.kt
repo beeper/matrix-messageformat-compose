@@ -36,5 +36,27 @@ class ReferenceHtmlFixtureTest {
         }
     }
 
+    @Test
+    fun htmlSurvivesEditingUnchanged() {
+        val mismatches = fixtures.flatMap { fixture ->
+            // Both our own HTML and the reference HTML that other clients send
+            listOf(parser.toHtml(fixture.markdown), fixture.html).mapNotNull { html ->
+                val content = parser.fromHtml(html)
+                val actual = parser.toHtml(content)
+                // Links to their own URL become plain URLs, which clients link when showing them
+                val expected = BARE_LINK.replace(html) { it.groupValues[2] }
+                if (actual.normalized() == expected.normalized()) return@mapNotNull null
+                "html: ${html.show()}\n  markdown: ${content.text.show()}\n  html after: ${actual.show()}"
+            }
+        }
+        if (mismatches.isNotEmpty()) {
+            fail("${mismatches.size} of ${2 * fixtures.size} HTML inputs differ:\n${mismatches.joinToString("\n")}")
+        }
+    }
+
+    private companion object {
+        val BARE_LINK = Regex("""<a href="([^"]*)">(\1)</a>""")
+    }
+
     private fun String.show(): String = "\"" + replace("\\", "\\\\").replace("\n", "\\n").replace("\"", "\\\"") + "\""
 }

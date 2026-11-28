@@ -1,6 +1,7 @@
 package com.beeper.android.messageformat.markdown.html
 
 import com.beeper.android.messageformat.markdown.EntityMasking
+import com.beeper.android.messageformat.InlineImageInfo
 import com.beeper.android.messageformat.MatrixPatterns
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
 import org.intellij.markdown.html.DUMMY_ATTRIBUTES_CUSTOMIZER
@@ -23,8 +24,22 @@ internal fun MatrixInlineEntity.toHtml(visibleText: String): String = when (this
         "<a href=\"$href\">${escapeHtml(sentText(visibleText))}</a>"
     }
     is MatrixInlineEntity.RoomMention -> escapeHtml(sentText(visibleText))
-    is MatrixInlineEntity.CustomEmote ->
-        customEmoteHtml(escapeHtml(mxcUrl), escapeHtml(shortcode), body?.let(::escapeHtml), width, height)
+    is MatrixInlineEntity.InlineImage -> inlineImageHtml(image)
+}
+
+private fun inlineImageHtml(image: InlineImageInfo): String {
+    if (image.isEmote) {
+        val shortcode = image.emoteShortcode.orEmpty()
+        return customEmoteHtml(escapeHtml(image.uri), escapeHtml(shortcode), image.alt?.let(::escapeHtml), image.width, image.height)
+    }
+    val attributes = listOfNotNull(
+        "src" to image.uri,
+        image.alt?.let { "alt" to it },
+        image.title?.let { "title" to it },
+        image.width?.let { "width" to it.toString() },
+        image.height?.let { "height" to it.toString() },
+    )
+    return attributes.joinToString(separator = " ", prefix = "<img ", postfix = ">") { (name, value) -> "$name=\"${escapeHtml(value)}\"" }
 }
 
 /**

@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
 import com.beeper.android.messageformat.composer.EntityReconciler.reconcile
 import com.beeper.android.messageformat.composer.MarkReconciler.reconcileMarks
+import com.beeper.android.messageformat.InlineImageInfo
 import com.beeper.android.messageformat.markdown.ImagePackSource
 import com.beeper.android.messageformat.markdown.MatrixInlineEntity
 import com.beeper.android.messageformat.markdown.MatrixMarkdownContent
@@ -219,7 +220,19 @@ class MatrixMarkdownTextFieldState(
 private fun MatrixInlineEntity.toSaveable(): List<Any?> = when (this) {
     is MatrixInlineEntity.UserMention -> listOf(USER_MENTION, start, end, userId, contentText)
     is MatrixInlineEntity.RoomMention -> listOf(ROOM_MENTION, start, end)
-    is MatrixInlineEntity.CustomEmote -> listOf(CUSTOM_EMOTE, start, end, shortcode, mxcUrl, pack?.toSaveable(), body, width, height, info)
+    is MatrixInlineEntity.InlineImage -> listOf(
+        INLINE_IMAGE,
+        start,
+        end,
+        image.uri,
+        image.isEmote,
+        image.width,
+        image.height,
+        image.title,
+        image.alt,
+        pack?.toSaveable(),
+        packInfo,
+    )
 }
 
 private fun List<*>.toInlineEntity(): MatrixInlineEntity? {
@@ -228,16 +241,34 @@ private fun List<*>.toInlineEntity(): MatrixInlineEntity? {
     return when (this[0]) {
         USER_MENTION -> MatrixInlineEntity.UserMention(start, end, this[3] as String, this[4] as String?)
         ROOM_MENTION -> MatrixInlineEntity.RoomMention(start, end)
-        CUSTOM_EMOTE -> MatrixInlineEntity.CustomEmote(
+        INLINE_IMAGE -> MatrixInlineEntity.InlineImage(
             start,
             end,
-            shortcode = this[3] as String,
-            mxcUrl = this[4] as String,
+            InlineImageInfo(
+                uri = this[3] as String,
+                isEmote = this[4] as Boolean,
+                width = this[5] as Int?,
+                height = this[6] as Int?,
+                title = this[7] as String?,
+                alt = this[8] as String?,
+            ),
+            pack = (this[9] as? List<*>)?.toImagePackSource(),
+            packInfo = this[10] as String?,
+        )
+        // Saved before inline images replaced custom emotes
+        LEGACY_CUSTOM_EMOTE -> MatrixInlineEntity.InlineImage(
+            start,
+            end,
+            InlineImageInfo(
+                uri = this[4] as String,
+                isEmote = true,
+                width = getOrNull(7) as Int?,
+                height = getOrNull(8) as Int?,
+                title = this[3] as String,
+                alt = this[6] as String?,
+            ),
             pack = (this[5] as? List<*>)?.toImagePackSource(),
-            body = this[6] as String?,
-            width = getOrNull(7) as Int?,
-            height = getOrNull(8) as Int?,
-            info = getOrNull(9) as String?,
+            packInfo = getOrNull(9) as String?,
         )
         else -> null
     }
@@ -253,7 +284,8 @@ private fun List<*>.toImagePackSource() = ImagePackSource(
 
 private const val USER_MENTION = "user"
 private const val ROOM_MENTION = "room"
-private const val CUSTOM_EMOTE = "emote"
+private const val INLINE_IMAGE = "image"
+private const val LEGACY_CUSTOM_EMOTE = "emote"
 
 /** Remembers a [MatrixMarkdownTextFieldState] that is saved and restored with the composition. */
 @Composable

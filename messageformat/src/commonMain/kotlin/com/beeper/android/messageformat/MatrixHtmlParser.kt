@@ -652,7 +652,6 @@ class MatrixHtmlParser(
                 } else {
                     val title = el.attr("title").takeIf(String::isNotBlank)
                     val alt = el.attr("alt").takeIf(String::isNotBlank)
-                    val id = "${MatrixBodyAnnotations.INLINE_IMAGE_PREFIX}$uri"
                     val inlineImageInfo = InlineImageInfo(
                         uri = uri,
                         isEmote = el.hasAttr("data-mx-emoticon"),
@@ -661,6 +660,7 @@ class MatrixHtmlParser(
                         title = title,
                         alt = alt,
                     )
+                    val id = inlineImageInfo.id
                     val start = length
                     // Actual inline content
                     appendInlineContent(id, ctx.style.formatInlineImageFallback(inlineImageInfo))

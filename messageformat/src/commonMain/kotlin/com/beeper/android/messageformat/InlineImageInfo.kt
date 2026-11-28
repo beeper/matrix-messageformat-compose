@@ -37,6 +37,10 @@ data class InlineImageInfo(
     /** Description */
     val alt: String?,
 ) {
+    /** The key of this image in [MatrixBodyParseResult.inlineImages]. */
+    val id: String
+        get() = MatrixBodyAnnotations.INLINE_IMAGE_PREFIX + uri
+
     /** Desired width / height, if both are known */
     val ratio: Float?
         get() {
